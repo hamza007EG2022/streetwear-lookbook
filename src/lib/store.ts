@@ -1,9 +1,11 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { put, list, head } from '@vercel/blob';
+import { put, head } from '@vercel/blob';
 
 const DATA_PATH = path.join(process.cwd(), 'data', 'store.json');
 const BLOB_KEY = 'store.json';
+
+let cachedStoreUrl: string | null = null;
 
 export interface Product {
   id: string;
@@ -92,21 +94,22 @@ function useBlob(): boolean {
   return !!process.env.BLOB_READ_WRITE_TOKEN;
 }
 
-async function blobExists(): Promise<boolean> {
+async function getBlobUrl(): Promise<string | null> {
+  if (cachedStoreUrl) return cachedStoreUrl;
   try {
-    await head(BLOB_KEY);
-    return true;
+    const info = await head(BLOB_KEY);
+    cachedStoreUrl = info.url;
+    return info.url;
   } catch {
-    return false;
+    return null;
   }
 }
 
 async function readFromBlob(): Promise<SiteData | null> {
   try {
-    const { blobs } = await list();
-    const blob = blobs.find((b) => b.pathname === BLOB_KEY);
-    if (!blob) return null;
-    const res = await fetch(`${blob.url}?t=${Date.now()}`);
+    const url = await getBlobUrl();
+    if (!url) return null;
+    const res = await fetch(`${url}?t=${Date.now()}`);
     if (!res.ok) return null;
     const text = await res.text();
     return JSON.parse(text);
@@ -117,7 +120,13 @@ async function readFromBlob(): Promise<SiteData | null> {
 
 async function writeToBlob(data: SiteData): Promise<void> {
   const json = JSON.stringify(data, null, 2);
-  await put(BLOB_KEY, json, { contentType: 'application/json', access: 'public', allowOverwrite: true, cacheControlMaxAge: 0 });
+  const result = await put(BLOB_KEY, json, {
+    contentType: 'application/json',
+    access: 'public',
+    allowOverwrite: true,
+    cacheControlMaxAge: 0,
+  });
+  cachedStoreUrl = result.url;
 }
 
 export async function getData(): Promise<SiteData> {
@@ -126,9 +135,10 @@ export async function getData(): Promise<SiteData> {
     if (parsed) {
       return { ...defaults, ...parsed, colors: { ...defaults.colors, ...parsed.colors } };
     }
-    const exists = await blobExists();
-    if (!exists) {
+    try {
       await writeToBlob(defaults);
+    } catch {
+      // first write might fail if blob already exists and overwrite has issues
     }
     return { ...defaults };
   }
@@ -144,10 +154,13 @@ export async function getData(): Promise<SiteData> {
 
 export async function saveData(data: SiteData): Promise<void> {
   if (useBlob()) {
+    console.log("saveData: using blob, BLOB_READ_WRITE_TOKEN present");
     await writeToBlob(data);
+    console.log("saveData: blob write succeeded");
     return;
   }
 
+  console.log("saveData: BLOB_READ_WRITE_TOKEN missing, using local file");
   const dir = path.dirname(DATA_PATH);
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');
