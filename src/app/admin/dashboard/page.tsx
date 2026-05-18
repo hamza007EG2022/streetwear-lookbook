@@ -266,7 +266,7 @@ function BrandSection({ data, saveField, uploadFile }: any) {
 
 function ColorPicker({ label, color, onChange }: { label: string; color: string; onChange: (v: string) => void }) {
   const [local, setLocal] = useState(color);
-  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => { setLocal(color); }, [color]);
 
