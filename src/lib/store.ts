@@ -94,7 +94,7 @@ function useBlob(): boolean {
 
 async function readFromBlob(): Promise<SiteData | null> {
   try {
-    const result = await get(BLOB_KEY, { access: 'public' });
+    const result = await get(BLOB_KEY, { access: 'public', useCache: false });
     if (!result || result.statusCode !== 200) return null;
     const reader = result.stream.getReader();
     const decoder = new TextDecoder();
@@ -113,7 +113,7 @@ async function readFromBlob(): Promise<SiteData | null> {
 
 async function writeToBlob(data: SiteData): Promise<void> {
   const json = JSON.stringify(data, null, 2);
-  await put(BLOB_KEY, json, { contentType: 'application/json', access: 'public', allowOverwrite: true });
+  await put(BLOB_KEY, json, { contentType: 'application/json', access: 'public', allowOverwrite: true, cacheControlMaxAge: 0 });
 }
 
 export async function getData(): Promise<SiteData> {

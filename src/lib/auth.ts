@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { getData, saveData } from './store';
 
+const tokenCache = new Map<string, true>();
+
 export function getTokenFromRequest(req: NextRequest): string | undefined {
   let token = req.cookies.get("admin_token")?.value;
   if (!token) {
@@ -23,6 +25,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 
 export async function createSessionToken(): Promise<string> {
   const token = uuidv4();
+  tokenCache.set(token, true);
   const data = await getData();
   data.adminToken = token;
   await saveData(data);
@@ -31,12 +34,16 @@ export async function createSessionToken(): Promise<string> {
 
 export async function validateSessionToken(token: string): Promise<boolean> {
   if (!token) return false;
+  if (tokenCache.has(token)) return true;
   const data = await getData();
-  return data.adminToken === token;
+  const valid = data.adminToken === token;
+  if (valid) tokenCache.set(token, true);
+  return valid;
 }
 
 export async function clearSessionToken(): Promise<void> {
   const data = await getData();
   data.adminToken = "";
   await saveData(data);
+  tokenCache.clear();
 }
