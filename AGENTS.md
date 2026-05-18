@@ -6,21 +6,26 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Vercel Blob CDN Consistency (CRITICAL)
 
-`@vercel/blob` `put()` + `head()` + CDN `fetch()` has an **eventual consistency** problem. The CDN edge may serve **stale content** for up to ~5 seconds after a successful `put()`. This caused data to appear "reset to defaults" on page refresh.
+`@vercel/blob` `put()` + `head()` + CDN `fetch()` has an **eventual consistency** problem. The CDN edge may serve **stale content** for up to ~5 seconds after a successful `put()`. This causes MULTIPLE bugs:
 
-**Solution in `src/lib/store.ts`:**
-- Module-level `cachedData: SiteData | null` — immediately updated on every write
-- `readFromBlob()` returns `cachedData` if non-null (hits CDN only on cold start)
-- `writeToBlob()` sets `cachedData = data` immediately after `put()` completes
-- `getData()` checks `head()` before writing defaults — avoids overwriting user data on transient CDN read failure
+1. **Login wipes all data** — login route sees empty `adminPassword` (CDN stale), treats as first-time setup, calls `saveData()` → overwrites entire blob with defaults. This deletes messages, products, lookbook, everything.
+2. **Password resets** — password hash saved but CDN returns old hash on next login.
+3. **Messages vanish** — lost during any of the above overwrites.
+4. **Brand/hero/logo changes lost** — overwritten by a stale read + save from another operation.
 
-**Do NOT use `list()`** for reading — it's eventually consistent too.
-**`head()` is strongly consistent** — use it for blob existence checks.
-**`?t=${Date.now()}` cache-buster does NOT bypass Vercel CDN edge** — only helps browser cache.
+**Fixes applied:**
+- `login/route.ts`: Before first-time setup, calls `blobExists()` from store.ts. If blob exists but `adminPassword` is empty, returns **503** (retry) instead of overwriting.
+- `data/route.ts` (PUT): After password change, calls `verifyPasswordWrite()` which retries CDN reads up to 5×1s until the new hash is verified. Only returns success after propagation.
+- `store.ts`: Added `_updatedAt` timestamp to all data writes for staleness detection.
+- `store.ts`: `readFromBlob()` retries up to 3×1s on cold start when `cachedData` is null.
+- `store.ts`: `writeToBlob()` immediately sets `cachedData` so same-instance reads are never stale.
 
-## Auth Token CDN Issue
-
-First-time login needed multiple retries because blob-written tokens weren't visible to `readFromBlob()` immediately. Fixed with in-memory `tokenCache` Map in `src/lib/auth.ts`.
+**Key rules:**
+- Do NOT use `list()` — it's eventually consistent.
+- `head()` IS strongly consistent — use it for blob existence checks.
+- `?t=${Date.now()}` does NOT bypass Vercel CDN edge cache — only helps browser cache.
+- Module-level `cachedData` is the ONLY reliable way to get fresh data.
+- For critical writes (password), always verify by re-reading with retry.
 
 ## Admin ColorsSection Performance
 
