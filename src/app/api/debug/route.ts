@@ -7,56 +7,58 @@ export async function GET() {
   results.hasToken = !!token;
   results.tokenPrefix = token ? token.substring(0, 10) + "..." : null;
 
-  // Test head
+  // head() URL vs put() URL comparison
   try {
     const info = await head("store.json");
-    results.headOk = true;
-    results.headUrl = info.url.substring(0, 60);
+    results.headUrl = info.url;
     results.headSize = info.size;
     results.headUploaded = info.uploadedAt;
   } catch (e: any) {
-    results.headOk = false;
-    results.headError = e.message?.substring(0, 100);
+    results.headError = e.message?.substring(0, 150);
   }
 
-  // Test read via CDN URL (if head succeeded)
+  // Read store.json using head() URL
   if (results.headUrl) {
     try {
       const res = await fetch(`${results.headUrl}?t=${Date.now()}`);
-      results.fetchStatus = res.status;
+      results.headFetchStatus = res.status;
       if (res.ok) {
         const text = await res.text();
         const d = JSON.parse(text);
-        results.brandName = d.brand?.name;
-        results.hasPassword = !!d.adminPassword;
+        results.headBrandName = d.brand?.name;
       }
     } catch (e: any) {
-      results.fetchError = e.message;
+      results.headFetchError = e.message;
     }
   }
 
-  // Test write and immediate read
+  // Write new content and capture put() URL
   try {
-    const writeResult = await put("debug-write-test.json", JSON.stringify({ ts: Date.now(), msg: "hello" }), {
+    const newData = { brand: { name: "TEST-" + Date.now() } };
+    const putResult = await put("store.json", JSON.stringify(newData), {
       contentType: "application/json",
       access: "public",
       allowOverwrite: true,
     });
-    results.writeOk = true;
-    results.writeUrl = writeResult.url.substring(0, 60);
+    results.putUrl = putResult.url;
+    results.putPathname = putResult.pathname;
 
-    // Immediate read
-    const readRes = await fetch(`${writeResult.url}?t=${Date.now()}`);
-    if (readRes.ok) {
-      const readText = await readRes.text();
-      const readData = JSON.parse(readText);
-      results.writeReadBack = readData.msg;
-    } else {
-      results.writeReadStatus = readRes.status;
+    // Read using put() URL immediately
+    const putReadRes = await fetch(`${putResult.url}?t=${Date.now()}`);
+    results.putReadStatus = putReadRes.status;
+    if (putReadRes.ok) {
+      const putReadText = await putReadRes.text();
+      const putReadData = JSON.parse(putReadText);
+      results.putReadBrand = putReadData.brand?.name;
     }
+
+    // Now head() again to see if URL changed
+    const info2 = await head("store.json");
+    results.head2Url = info2.url;
+    results.head2Uploaded = info2.uploadedAt;
+    results.urlsMatch = info2.url === putResult.url;
   } catch (e: any) {
-    results.writeOk = false;
-    results.writeError = e.message?.substring(0, 100);
+    results.putError = e.message?.substring(0, 150);
   }
 
   return NextResponse.json(results);
