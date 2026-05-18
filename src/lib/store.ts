@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { put, get } from '@vercel/blob';
+import { put, list, head } from '@vercel/blob';
 
 const DATA_PATH = path.join(process.cwd(), 'data', 'store.json');
 const BLOB_KEY = 'store.json';
@@ -92,19 +92,23 @@ function useBlob(): boolean {
   return !!process.env.BLOB_READ_WRITE_TOKEN;
 }
 
+async function blobExists(): Promise<boolean> {
+  try {
+    await head(BLOB_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function readFromBlob(): Promise<SiteData | null> {
   try {
-    const result = await get(BLOB_KEY, { access: 'public', useCache: false });
-    if (!result || result.statusCode !== 200) return null;
-    const reader = result.stream.getReader();
-    const decoder = new TextDecoder();
-    let text = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      text += decoder.decode(value, { stream: true });
-    }
-    text += decoder.decode();
+    const { blobs } = await list();
+    const blob = blobs.find((b) => b.pathname === BLOB_KEY);
+    if (!blob) return null;
+    const res = await fetch(`${blob.url}?t=${Date.now()}`);
+    if (!res.ok) return null;
+    const text = await res.text();
     return JSON.parse(text);
   } catch {
     return null;
@@ -122,8 +126,11 @@ export async function getData(): Promise<SiteData> {
     if (parsed) {
       return { ...defaults, ...parsed, colors: { ...defaults.colors, ...parsed.colors } };
     }
-    await writeToBlob(defaults);
-    return defaults;
+    const exists = await blobExists();
+    if (!exists) {
+      await writeToBlob(defaults);
+    }
+    return { ...defaults };
   }
 
   try {
