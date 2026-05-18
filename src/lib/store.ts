@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { put, del, list } from '@vercel/blob';
+import { put, get } from '@vercel/blob';
 
 const DATA_PATH = path.join(process.cwd(), 'data', 'store.json');
 const BLOB_KEY = 'store.json';
@@ -94,12 +94,17 @@ function useBlob(): boolean {
 
 async function readFromBlob(): Promise<SiteData | null> {
   try {
-    const { blobs } = await list();
-    const blob = blobs.find((b) => b.pathname === BLOB_KEY);
-    if (!blob) return null;
-    const res = await fetch(blob.url);
-    if (!res.ok) return null;
-    const text = await res.text();
+    const result = await get(BLOB_KEY, { access: 'public' });
+    if (!result || result.statusCode !== 200) return null;
+    const reader = result.stream.getReader();
+    const decoder = new TextDecoder();
+    let text = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      text += decoder.decode(value, { stream: true });
+    }
+    text += decoder.decode();
     return JSON.parse(text);
   } catch {
     return null;
