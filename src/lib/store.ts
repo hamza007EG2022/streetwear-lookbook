@@ -108,7 +108,7 @@ async function readFromBlob(): Promise<SiteData | null> {
 
 async function writeToBlob(data: SiteData): Promise<void> {
   const json = JSON.stringify(data, null, 2);
-  await put(BLOB_KEY, json, { contentType: 'application/json', access: 'public' });
+  await put(BLOB_KEY, json, { contentType: 'application/json', access: 'public', allowOverwrite: true });
 }
 
 export async function getData(): Promise<SiteData> {
