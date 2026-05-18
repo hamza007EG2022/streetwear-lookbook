@@ -6,6 +6,7 @@ const DATA_PATH = path.join(process.cwd(), 'data', 'store.json');
 const BLOB_KEY = 'store.json';
 
 let cachedStoreUrl: string | null = null;
+let cachedData: SiteData | null = null;
 
 export interface Product {
   id: string;
@@ -106,13 +107,16 @@ async function getBlobUrl(): Promise<string | null> {
 }
 
 async function readFromBlob(): Promise<SiteData | null> {
+  if (cachedData) return cachedData;
   try {
     const url = await getBlobUrl();
     if (!url) return null;
     const res = await fetch(`${url}?t=${Date.now()}`);
     if (!res.ok) return null;
     const text = await res.text();
-    return JSON.parse(text);
+    const parsed = JSON.parse(text);
+    cachedData = parsed;
+    return parsed;
   } catch {
     return null;
   }
@@ -127,6 +131,7 @@ async function writeToBlob(data: SiteData): Promise<void> {
     cacheControlMaxAge: 0,
   });
   cachedStoreUrl = result.url;
+  cachedData = data;
 }
 
 export async function getData(): Promise<SiteData> {
