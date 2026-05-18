@@ -77,7 +77,7 @@ export const DEFAULT_COLORS: SiteColors = {
 const defaults: SiteData = {
   brand: { name: "TRIO-Fashion Streetwear", logo: "/placeholder-logo.svg", tagline: "Urban Luxury Streetwear" },
   colors: { ...DEFAULT_COLORS },
-  hero: { title: "NEW COLLECTION", subtitle: "SS 2026", backgroundImage: "/placeholder-hero.jpg" },
+  hero: { title: "NEW COLLECTION", subtitle: "SS 2026", backgroundImage: "/placeholder-logo.svg" },
   products: [],
   lookbook: [],
   about: { title: "OUR STORY", text: "Born from the streets, crafted for the bold.", images: [] },
