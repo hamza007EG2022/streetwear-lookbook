@@ -53,6 +53,7 @@ export interface Chat {
 }
 
 export interface SiteData {
+  _updatedAt?: number;
   brand: { name: string; logo: string; tagline: string };
   colors: SiteColors;
   hero: { title: string; subtitle: string; backgroundImage: string };
@@ -78,6 +79,7 @@ export const DEFAULT_COLORS: SiteColors = {
 };
 
 const defaults: SiteData = {
+  _updatedAt: Date.now(),
   brand: { name: "TRIO-Fashion Streetwear", logo: "/placeholder-logo.svg", tagline: "Urban Luxury Streetwear" },
   colors: { ...DEFAULT_COLORS },
   hero: { title: "NEW COLLECTION", subtitle: "SS 2026", backgroundImage: "/placeholder-logo.svg" },
@@ -95,6 +97,17 @@ function useBlob(): boolean {
   return !!process.env.BLOB_READ_WRITE_TOKEN;
 }
 
+export async function blobExists(): Promise<boolean> {
+  if (cachedStoreUrl) return true;
+  try {
+    const info = await head(BLOB_KEY);
+    cachedStoreUrl = info.url;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function getBlobUrl(): Promise<string | null> {
   if (cachedStoreUrl) return cachedStoreUrl;
   try {
@@ -108,18 +121,27 @@ async function getBlobUrl(): Promise<string | null> {
 
 async function readFromBlob(): Promise<SiteData | null> {
   if (cachedData) return cachedData;
-  try {
-    const url = await getBlobUrl();
-    if (!url) return null;
-    const res = await fetch(`${url}?t=${Date.now()}`);
-    if (!res.ok) return null;
-    const text = await res.text();
-    const parsed = JSON.parse(text);
-    cachedData = parsed;
-    return parsed;
-  } catch {
-    return null;
+  const url = await getBlobUrl();
+  if (!url) return null;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const res = await fetch(`${url}?t=${Date.now()}`);
+      if (!res.ok) {
+        if (i < 2) { await new Promise(r => setTimeout(r, 1000)); continue; }
+        return null;
+      }
+      const text = await res.text();
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed.brand?.name === 'string') {
+        cachedData = parsed;
+        return parsed;
+      }
+      if (i < 2) await new Promise(r => setTimeout(r, 1000));
+    } catch {
+      if (i < 2) await new Promise(r => setTimeout(r, 1000));
+    }
   }
+  return null;
 }
 
 async function writeToBlob(data: SiteData): Promise<void> {
@@ -162,14 +184,12 @@ export async function getData(): Promise<SiteData> {
 }
 
 export async function saveData(data: SiteData): Promise<void> {
+  data._updatedAt = Date.now();
   if (useBlob()) {
-    console.log("saveData: using blob, BLOB_READ_WRITE_TOKEN present");
     await writeToBlob(data);
-    console.log("saveData: blob write succeeded");
     return;
   }
 
-  console.log("saveData: BLOB_READ_WRITE_TOKEN missing, using local file");
   const dir = path.dirname(DATA_PATH);
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');

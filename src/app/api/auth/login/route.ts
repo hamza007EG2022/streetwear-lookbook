@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyPassword, hashPassword, createSessionToken } from "@/lib/auth";
-import { getData, saveData } from "@/lib/store";
+import { getData, saveData, blobExists } from "@/lib/store";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,6 +12,10 @@ export async function POST(req: NextRequest) {
     const data = await getData();
 
     if (!data.adminPassword) {
+      const exists = await blobExists();
+      if (exists) {
+        return NextResponse.json({ error: "Data not ready, please retry" }, { status: 503 });
+      }
       const hashed = await hashPassword(password);
       data.adminPassword = hashed;
       await saveData(data);
