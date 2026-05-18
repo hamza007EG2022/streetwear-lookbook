@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Streetwear Lookbook",
+  title: "TRIO-Fashion Streetwear",
   description: "Urban Luxury Streetwear Collection",
 };
 
