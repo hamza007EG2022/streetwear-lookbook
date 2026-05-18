@@ -140,10 +140,14 @@ export async function getData(): Promise<SiteData> {
     if (parsed) {
       return { ...defaults, ...parsed, colors: { ...defaults.colors, ...parsed.colors } };
     }
-    try {
-      await writeToBlob(defaults);
-    } catch {
-      // first write might fail if blob already exists and overwrite has issues
+    // Only write defaults if blob genuinely doesn't exist
+    const blobUrl = await getBlobUrl();
+    if (!blobUrl) {
+      try {
+        await writeToBlob(defaults);
+      } catch {
+        // first write might fail
+      }
     }
     return { ...defaults };
   }
