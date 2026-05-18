@@ -265,40 +265,33 @@ function BrandSection({ data, saveField, uploadFile }: any) {
 }
 
 function ColorPicker({ label, color, onChange }: { label: string; color: string; onChange: (v: string) => void }) {
-  const [local, setLocal] = useState(color);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  useEffect(() => { setLocal(color); }, [color]);
-
-  function handleChange(v: string) {
-    setLocal(v);
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => onChange(v), 400);
-  }
-
   return (
     <div className="space-y-1.5">
       <label className="text-[10px] tracking-widest uppercase opacity-50">{label}</label>
       <div className="flex items-center gap-3">
-        <input
-          type="color"
-          value={local}
-          onChange={(e) => handleChange(e.target.value)}
-          className="w-10 h-10 border border-black/10 rounded cursor-pointer"
-        />
-        <input
-          type="text"
-          value={local}
-          onChange={(e) => handleChange(e.target.value)}
-          className="border border-black/10 bg-white px-3 py-1.5 text-xs font-mono outline-none focus:border-black/40 transition-colors w-28"
-        />
+        <input type="color" value={color} onChange={(e) => onChange(e.target.value)} className="w-10 h-10 border border-black/10 rounded cursor-pointer" />
+        <input type="text" value={color} onChange={(e) => onChange(e.target.value)} className="border border-black/10 bg-white px-3 py-1.5 text-xs font-mono outline-none focus:border-black/40 transition-colors w-28" />
       </div>
     </div>
   );
 }
 
-function ColorsSection({ data, saveField, saveAll }: any) {
-  const c = data.colors;
+function ColorsSection({ data, saveAll }: any) {
+  const [locals, setLocals] = useState(data.colors);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const latest = useRef(locals);
+
+  useEffect(() => { setLocals(data.colors); latest.current = data.colors; }, [data.colors]);
+
+  const c = locals;
+
+  function handleChange(key: string, value: string) {
+    const next = { ...latest.current, [key]: value };
+    latest.current = next;
+    setLocals(next);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => saveAll({ colors: next }), 500);
+  }
 
   const previewStyle: React.CSSProperties = {
     backgroundColor: c.background,
@@ -311,13 +304,15 @@ function ColorsSection({ data, saveField, saveAll }: any) {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold tracking-tight">Color Scheme</h2>
         <button
-          onClick={() => saveAll({
-            colors: {
+          onClick={() => {
+            const defaults = {
               primary: "#ffffff", secondary: "#f5f5f0", background: "#f5f5f0",
               text: "#111111", button: "#111111", accent: "#111111",
               navbar: "#ffffff", footer: "#ffffff",
-            },
-          })}
+            };
+            setLocals(defaults);
+            saveAll({ colors: defaults });
+          }}
           className="border border-black/10 px-4 py-1.5 text-[10px] tracking-widest uppercase hover:bg-black hover:text-white transition-colors"
         >
           Reset to Defaults
@@ -327,17 +322,17 @@ function ColorsSection({ data, saveField, saveAll }: any) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-5">
           <p className="text-xs tracking-widest uppercase opacity-30 mb-2">Main Colors</p>
-          <ColorPicker label="Primary" color={c.primary} onChange={(v) => saveField("colors.primary", v)} />
-          <ColorPicker label="Secondary" color={c.secondary} onChange={(v) => saveField("colors.secondary", v)} />
-          <ColorPicker label="Background" color={c.background} onChange={(v) => saveField("colors.background", v)} />
-          <ColorPicker label="Text" color={c.text} onChange={(v) => saveField("colors.text", v)} />
+          <ColorPicker label="Primary" color={c.primary} onChange={(v) => handleChange("primary", v)} />
+          <ColorPicker label="Secondary" color={c.secondary} onChange={(v) => handleChange("secondary", v)} />
+          <ColorPicker label="Background" color={c.background} onChange={(v) => handleChange("background", v)} />
+          <ColorPicker label="Text" color={c.text} onChange={(v) => handleChange("text", v)} />
         </div>
         <div className="space-y-5">
           <p className="text-xs tracking-widest uppercase opacity-30 mb-2">UI Colors</p>
-          <ColorPicker label="Button" color={c.button} onChange={(v) => saveField("colors.button", v)} />
-          <ColorPicker label="Accent / Highlight" color={c.accent} onChange={(v) => saveField("colors.accent", v)} />
-          <ColorPicker label="Navbar" color={c.navbar} onChange={(v) => saveField("colors.navbar", v)} />
-          <ColorPicker label="Footer" color={c.footer} onChange={(v) => saveField("colors.footer", v)} />
+          <ColorPicker label="Button" color={c.button} onChange={(v) => handleChange("button", v)} />
+          <ColorPicker label="Accent / Highlight" color={c.accent} onChange={(v) => handleChange("accent", v)} />
+          <ColorPicker label="Navbar" color={c.navbar} onChange={(v) => handleChange("navbar", v)} />
+          <ColorPicker label="Footer" color={c.footer} onChange={(v) => handleChange("footer", v)} />
         </div>
       </div>
 
@@ -629,16 +624,19 @@ function MessagesSection() {
   const [selected, setSelected] = useState<any>(null);
   const [replyText, setReplyText] = useState("");
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
 
   async function loadChats() {
     try {
       const res = await fetch("/api/chat/conversations", { credentials: "include" });
+      if (!res.ok) { setErr("Auth error"); return; }
       const data = await res.json();
       setChats(data.chats || []);
-    } catch {} finally { setLoading(false); }
+      setErr("");
+    } catch { setErr("Connection error"); } finally { setLoading(false); }
   }
 
-  useEffect(() => { loadChats(); const iv = setInterval(loadChats, 3000); return () => clearInterval(iv); }, []);
+  useEffect(() => { loadChats(); const iv = setInterval(loadChats, 8000); return () => clearInterval(iv); }, []);
 
   async function openChat(chat: any) {
     setSelected(chat);

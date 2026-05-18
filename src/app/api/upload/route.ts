@@ -24,19 +24,22 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
 
     if (process.env.BLOB_READ_WRITE_TOKEN) {
-      const blob = await put(`uploads/${filename}`, file.stream(), {
+      const buffer = Buffer.from(bytes);
+      const blob = await put(`uploads/${filename}`, buffer, {
         contentType: file.type || 'image/jpeg',
         access: 'public',
+        allowOverwrite: true,
       });
       return NextResponse.json({ url: blob.url });
     }
 
     const uploadDir = path.join(process.cwd(), "public", "uploads");
     await mkdir(uploadDir, { recursive: true });
-    const buffer = Buffer.from(bytes);
-    await writeFile(path.join(uploadDir, filename), buffer);
+    await writeFile(path.join(uploadDir, filename), Buffer.from(bytes));
     return NextResponse.json({ url: `/uploads/${filename}` });
-  } catch {
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("Upload error:", msg);
+    return NextResponse.json({ error: "Upload failed", detail: msg }, { status: 500 });
   }
 }

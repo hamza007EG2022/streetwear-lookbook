@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
 
 export default function LoginPage() {
@@ -8,7 +7,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSetup, setIsSetup] = useState(false);
-  const router = useRouter();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -23,7 +21,7 @@ export default function LoginPage() {
       });
 
       if (res.ok) {
-        router.push("/admin/dashboard");
+        window.location.href = "/admin/dashboard";
       } else {
         const body = await res.json();
         if (res.status === 401) {
