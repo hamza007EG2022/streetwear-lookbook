@@ -19,11 +19,17 @@ export interface Product {
   name: string;
   photos: string[];
   price: string;
+  discountPrice?: string;
   description: string;
   category: string;
   sizes: string[];
+  stockPerSize?: Record<string, number>;
   material?: string;
   stock?: 'in_stock' | 'low_stock' | 'out_of_stock';
+  badge?: 'none' | 'new_arrival' | 'best_seller' | 'limited_edition' | 'sale';
+  visible?: boolean;
+  gender?: 'unisex' | 'men' | 'women';
+  priority?: number;
 }
 
 export interface LookbookItem {

@@ -414,16 +414,31 @@ function HeroSection({ data, saveField, uploadFile }: any) {
   );
 }
 
+const BADGE_OPTIONS = [
+  { value: "none", label: "None" },
+  { value: "new_arrival", label: "New Arrival" },
+  { value: "best_seller", label: "Best Seller" },
+  { value: "limited_edition", label: "Limited Edition" },
+  { value: "sale", label: "Sale" },
+];
+
+const GENDER_OPTIONS = [
+  { value: "unisex", label: "Unisex" },
+  { value: "men", label: "Men" },
+  { value: "women", label: "Women" },
+];
+
 function ProductsSection({ data, handleAction, uploadFile }: any) {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", price: "", description: "", category: "", material: "", stock: "in_stock" as string, photos: [] as string[], sizes: [] as string[] });
+  const [form, setForm] = useState({ name: "", price: "", discountPrice: "", description: "", category: "", material: "", stock: "in_stock" as string, badge: "none" as string, gender: "unisex" as string, priority: 0, visible: true, photos: [] as string[], sizes: [] as string[], stockPerSize: {} as Record<string, number> });
   const [sizeInput, setSizeInput] = useState("");
+  const [sizeStock, setSizeStock] = useState("");
 
-  function resetForm() { setForm({ name: "", price: "", description: "", category: "", material: "", stock: "in_stock", photos: [], sizes: [] }); }
+  function resetForm() { setForm({ name: "", price: "", discountPrice: "", description: "", category: "", material: "", stock: "in_stock", badge: "none", gender: "unisex", priority: 0, visible: true, photos: [], sizes: [], stockPerSize: {} }); }
 
   function editProduct(p: any) {
-    setForm({ name: p.name, price: p.price, description: p.description, category: p.category, material: p.material || "", stock: p.stock || "in_stock", photos: p.photos || [], sizes: p.sizes || [] });
+    setForm({ name: p.name, price: p.price, discountPrice: p.discountPrice || "", description: p.description, category: p.category, material: p.material || "", stock: p.stock || "in_stock", badge: p.badge || "none", gender: p.gender || "unisex", priority: p.priority || 0, visible: p.visible !== false, photos: p.photos || [], sizes: p.sizes || [], stockPerSize: p.stockPerSize || {} });
     setEditing(p);
     setShowForm(true);
   }
@@ -460,14 +475,31 @@ function ProductsSection({ data, handleAction, uploadFile }: any) {
   function addSize() {
     const s = sizeInput.trim().toUpperCase();
     if (s && !form.sizes.includes(s)) {
-      setForm((prev: any) => ({ ...prev, sizes: [...prev.sizes, s] }));
+      setForm((prev: any) => ({ ...prev, sizes: [...prev.sizes, s], stockPerSize: { ...prev.stockPerSize, [s]: parseInt(sizeStock) || 0 } }));
       setSizeInput("");
+      setSizeStock("");
     }
   }
 
   function removeSize(s: string) {
-    setForm((prev: any) => ({ ...prev, sizes: prev.sizes.filter((x: string) => x !== s) }));
+    setForm((prev: any) => {
+      const { [s]: _, ...rest } = prev.stockPerSize;
+      return { ...prev, sizes: prev.sizes.filter((x: string) => x !== s), stockPerSize: rest };
+    });
   }
+
+  const STOCK_LABELS: Record<string, { label: string; color: string }> = {
+    in_stock: { label: "In Stock", color: "text-green-600" },
+    low_stock: { label: "Low Stock", color: "text-amber-600" },
+    out_of_stock: { label: "Sold Out", color: "text-red-500" },
+  };
+
+  const BADGE_LABELS: Record<string, string> = {
+    new_arrival: "New Arrival",
+    best_seller: "Best Seller",
+    limited_edition: "Limited Edition",
+    sale: "Sale",
+  };
 
   return (
     <div className="space-y-8">
@@ -486,17 +518,51 @@ function ProductsSection({ data, handleAction, uploadFile }: any) {
             <form onSubmit={saveProduct} className="space-y-3">
               <Field label="Name" value={form.name} onChange={(v: string) => setForm({ ...form, name: v })} />
               <Field label="Price" value={form.price} onChange={(v: string) => setForm({ ...form, price: v })} />
+              <Field label="Discount Price (optional)" value={form.discountPrice} onChange={(v: string) => setForm({ ...form, discountPrice: v })} placeholder="e.g. $45" />
               <Field label="Category" value={form.category} onChange={(v: string) => setForm({ ...form, category: v })} />
               <Field label="Description" type="textarea" value={form.description} onChange={(v: string) => setForm({ ...form, description: v })} />
               <Field label="Material" value={form.material} onChange={(v: string) => setForm({ ...form, material: v })} placeholder="e.g. 100% Cotton, Polyester Blend" />
-              <div className="space-y-1.5">
-                <label className="text-[10px] tracking-widest uppercase opacity-40">Stock Status</label>
-                <select value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })}
-                  className="w-full border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-black/40">
-                  <option value="in_stock">In Stock</option>
-                  <option value="low_stock">Low Stock</option>
-                  <option value="out_of_stock">Sold Out</option>
-                </select>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] tracking-widest uppercase opacity-40">Badge</label>
+                  <select value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })}
+                    className="w-full border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-black/40">
+                    {BADGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] tracking-widest uppercase opacity-40">Gender</label>
+                  <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                    className="w-full border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-black/40">
+                    {GENDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] tracking-widest uppercase opacity-40">Stock Status</label>
+                  <select value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                    className="w-full border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-black/40">
+                    <option value="in_stock">In Stock</option>
+                    <option value="low_stock">Low Stock</option>
+                    <option value="out_of_stock">Sold Out</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] tracking-widest uppercase opacity-40">Priority (lower = first)</label>
+                  <input type="number" value={form.priority} onChange={(e) => setForm({ ...form, priority: parseInt(e.target.value) || 0 })}
+                    className="w-full border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-black/40" />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 py-1">
+                <label className="text-[10px] tracking-widest uppercase opacity-40">Visible on site</label>
+                <button type="button" onClick={() => setForm({ ...form, visible: !form.visible })}
+                  className={`w-9 h-5 rounded-full transition-colors ${form.visible ? 'bg-black' : 'bg-zinc-300'}`}>
+                  <div className={`w-3.5 h-3.5 bg-white rounded-full transition-transform ${form.visible ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </button>
               </div>
 
               <div className="space-y-1.5">
@@ -525,11 +591,11 @@ function ProductsSection({ data, handleAction, uploadFile }: any) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] tracking-widest uppercase opacity-40">Available Sizes</label>
+                <label className="text-[10px] tracking-widest uppercase opacity-40">Sizes</label>
                 <div className="flex flex-wrap gap-1.5">
                   {form.sizes.map((s: string) => (
                     <span key={s} className="inline-flex items-center gap-1 border border-black/10 px-2 py-0.5 text-[11px]">
-                      {s}
+                      {s}: {form.stockPerSize[s] || 0}pcs
                       <button type="button" onClick={() => removeSize(s)} className="text-red-400 hover:text-red-600">✕</button>
                     </span>
                   ))}
@@ -537,7 +603,10 @@ function ProductsSection({ data, handleAction, uploadFile }: any) {
                 <div className="flex gap-2">
                   <input value={sizeInput} onChange={(e) => setSizeInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addSize())}
-                    placeholder="e.g. S, M, L, XL" className="flex-1 border border-black/10 bg-white px-3 py-1.5 text-sm outline-none focus:border-black/40" />
+                    placeholder="Size (e.g. XL)" className="w-24 border border-black/10 bg-white px-3 py-1.5 text-sm outline-none focus:border-black/40" />
+                  <input value={sizeStock} onChange={(e) => setSizeStock(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addSize())}
+                    type="number" min="0" placeholder="Qty" className="w-20 border border-black/10 bg-white px-3 py-1.5 text-sm outline-none focus:border-black/40" />
                   <button type="button" onClick={addSize} className="border border-black/10 px-3 py-1.5 text-xs hover:bg-black hover:text-white transition-colors">Add</button>
                 </div>
               </div>
@@ -551,20 +620,47 @@ function ProductsSection({ data, handleAction, uploadFile }: any) {
         </div>
       )}
 
-      <div className="space-y-2">
-        {data.products.length === 0 && <p className="text-xs opacity-30 italic">No products added yet.</p>}
-        {data.products.map((p: any) => (
-          <div key={p.id} className="flex items-center gap-4 bg-white border border-black/5 p-3">
-            <div className="w-12 h-12 bg-zinc-100 flex-shrink-0 bg-cover bg-center" style={{ backgroundImage: `url(${p.photos?.[0] || ""})` }} />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{p.name}</p>
-              <p className="text-xs opacity-40">{p.price} · {p.category} · {p.photos?.length || 0} photos · {p.sizes?.length || 0} sizes</p>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        {data.products.length === 0 && <p className="text-xs opacity-30 italic col-span-full">No products added yet.</p>}
+        {[...data.products]
+          .sort((a: any, b: any) => (a.priority || 999) - (b.priority || 999))
+          .map((p: any) => {
+          const badgeLabel = BADGE_LABELS[p.badge];
+          const st = STOCK_LABELS[p.stock] || STOCK_LABELS.in_stock;
+          return (
+          <div key={p.id} className="group bg-white border border-black/5 overflow-hidden">
+            <div className="aspect-[3/4] bg-zinc-100 bg-cover bg-center relative" style={{ backgroundImage: `url(${p.photos?.[0] || ""})` }}>
+              {badgeLabel && (
+                <span className="absolute top-2 left-2 bg-black text-white text-[9px] tracking-wider uppercase px-2 py-0.5">{badgeLabel}</span>
+              )}
+              {p.discountPrice && (
+                <span className="absolute top-2 right-2 bg-red-600 text-white text-[9px] tracking-wider uppercase px-2 py-0.5">{p.discountPrice}</span>
+              )}
+              {p.visible === false && (
+                <span className="absolute bottom-2 left-2 bg-zinc-800/80 text-white text-[9px] tracking-wider uppercase px-2 py-0.5">Hidden</span>
+              )}
+              <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                <button onClick={() => editProduct(p)} className="flex-1 bg-white text-black text-[10px] py-1 uppercase tracking-wider hover:opacity-80">Edit</button>
+                <button onClick={() => handleAction({ type: "delete-product", id: p.id })}
+                  className="bg-red-500 text-white text-[10px] px-2 py-1 uppercase tracking-wider hover:opacity-80">✕</button>
+              </div>
             </div>
-            <button onClick={() => editProduct(p)} className="text-[10px] tracking-widest uppercase opacity-30 hover:opacity-100">Edit</button>
-            <button onClick={() => handleAction({ type: "delete-product", id: p.id })}
-              className="text-[10px] tracking-widest uppercase text-red-400 hover:text-red-600">Delete</button>
+            <div className="p-2.5">
+              <p className="text-xs font-medium truncate">{p.name}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {p.discountPrice ? (
+                  <>
+                    <span className="text-xs font-medium">{p.discountPrice}</span>
+                    <span className="text-[10px] opacity-30 line-through">{p.price}</span>
+                  </>
+                ) : (
+                  <span className="text-xs">{p.price}</span>
+                )}
+              </div>
+              <p className={`text-[10px] mt-0.5 ${st.color}`}>{st.label}</p>
+            </div>
           </div>
-        ))}
+        );})}
       </div>
     </div>
   );

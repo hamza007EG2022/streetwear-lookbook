@@ -102,7 +102,7 @@ export default function ProductPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           productName: product.name,
-          productPrice: product.price,
+          productPrice: product.discountPrice || product.price,
           items,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
@@ -197,8 +197,25 @@ export default function ProductPage() {
           {/* Product Info */}
           <div className="flex flex-col">
             <p className="text-[10px] tracking-[0.3em] uppercase opacity-40 mb-2">{product.category}</p>
+            {product.gender && product.gender !== 'unisex' && (
+              <p className="text-[10px] tracking-[0.3em] uppercase opacity-30 mb-1">{product.gender}</p>
+            )}
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">{product.name}</h1>
-            <p className="text-xl font-medium mb-4">{product.price}</p>
+
+            {product.badge && product.badge !== 'none' && (
+              <span className="inline-block bg-black text-white text-[9px] tracking-wider uppercase px-2 py-0.5 mb-3 w-fit">
+                {product.badge === 'new_arrival' ? 'New Arrival' : product.badge === 'best_seller' ? 'Best Seller' : product.badge === 'limited_edition' ? 'Limited Edition' : 'Sale'}
+              </span>
+            )}
+
+            {product.discountPrice ? (
+              <div className="flex items-center gap-2 mb-4">
+                <p className="text-xl font-medium text-red-600">{product.discountPrice}</p>
+                <p className="text-sm opacity-30 line-through">{product.price}</p>
+              </div>
+            ) : (
+              <p className="text-xl font-medium mb-4">{product.price}</p>
+            )}
 
             <p className={`text-xs tracking-wider uppercase mb-6 ${stockInfo.color}`}>
               {stockInfo.label}
@@ -223,16 +240,22 @@ export default function ProductPage() {
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {product.sizes.map((s: string) => (
-                    <button key={s} onClick={() => setSelectedSize(s)}
+                  {product.sizes.map((s: string) => {
+                    const stockQty = product.stockPerSize?.[s];
+                    const outOfStock = stockQty !== undefined && stockQty <= 0;
+                    return (
+                    <button key={s} onClick={() => !outOfStock && setSelectedSize(s)}
+                      disabled={outOfStock}
                       className={`px-4 py-2 text-xs tracking-widest uppercase border transition-colors ${
-                        selectedSize === s
-                          ? "bg-black text-white border-black"
-                          : "border-black/20 hover:border-black/60"
+                        outOfStock
+                          ? "border-red-200 text-red-300 cursor-not-allowed line-through"
+                          : selectedSize === s
+                            ? "bg-black text-white border-black"
+                            : "border-black/20 hover:border-black/60"
                       }`}>
-                      {s}
+                      {s}{stockQty !== undefined && !outOfStock && <span className="ml-1 text-[9px] opacity-40">({stockQty})</span>}
                     </button>
-                  ))}
+                  );})}
                 </div>
               </div>
             )}
@@ -252,7 +275,7 @@ export default function ProductPage() {
               {related.slice(0, 4).map((p: any) => (
                 <Link key={p.id} href={`/products/${p.id}`}
                   className="group block bg-zinc-50 border border-black/5 overflow-hidden">
-                  <div className="aspect-[3/4] bg-zinc-100 overflow-hidden">
+                  <div className="aspect-[3/4] bg-zinc-100 overflow-hidden relative">
                     {p.photos?.[0] ? (
                       <img src={p.photos[0]} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     ) : (
@@ -260,10 +283,20 @@ export default function ProductPage() {
                         <span className="text-[10px] tracking-widest uppercase opacity-30">No Photo</span>
                       </div>
                     )}
+                    {p.badge && p.badge !== 'none' && (
+                      <span className="absolute top-2 left-2 bg-black text-white text-[8px] tracking-wider uppercase px-1.5 py-0.5">{p.badge === 'new_arrival' ? 'New Arrival' : p.badge === 'best_seller' ? 'Best Seller' : p.badge === 'limited_edition' ? 'Limited Edition' : 'Sale'}</span>
+                    )}
                   </div>
                   <div className="p-3">
                     <p className="text-xs font-medium truncate">{p.name}</p>
-                    <p className="text-[10px] opacity-40 mt-0.5">{p.price}</p>
+                    {p.discountPrice ? (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <p className="text-[10px] font-medium">{p.discountPrice}</p>
+                        <p className="text-[9px] opacity-30 line-through">{p.price}</p>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] opacity-40 mt-0.5">{p.price}</p>
+                    )}
                   </div>
                 </Link>
               ))}
