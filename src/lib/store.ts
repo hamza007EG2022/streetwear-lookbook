@@ -180,7 +180,7 @@ export async function getData(): Promise<SiteData> {
   if (useBlob()) {
     const parsed = await readFromBlob();
     if (parsed) {
-      return { ...defaults, ...parsed, colors: { ...defaults.colors, ...parsed.colors } };
+      return { ...defaults, ...parsed, colors: { ...defaults.colors, ...parsed.colors }, contact: { ...defaults.contact, ...parsed.contact } };
     }
     // Only write defaults if blob genuinely doesn't exist
     const blobUrl = await getBlobUrl();
@@ -197,7 +197,7 @@ export async function getData(): Promise<SiteData> {
   try {
     const content = await fs.readFile(DATA_PATH, 'utf-8');
     const parsed = JSON.parse(content);
-    return { ...defaults, ...parsed, colors: { ...defaults.colors, ...parsed.colors } };
+    return { ...defaults, ...parsed, colors: { ...defaults.colors, ...parsed.colors }, contact: { ...defaults.contact, ...parsed.contact } };
   } catch {
     return defaults;
   }
