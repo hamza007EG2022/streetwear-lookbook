@@ -35,7 +35,7 @@ export default function LookbookPage() {
         <h2 className="text-4xl md:text-6xl font-bold tracking-tight">The Collection</h2>
       </div>
       {items.length === 0 ? (
-        <div className="max-w-7xl mx-auto px-6 pb-24">
+        <div className="max-w-7xl mx-auto px-6 pb-12">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i}
@@ -46,7 +46,7 @@ export default function LookbookPage() {
           </div>
         </div>
       ) : (
-        <div className="max-w-7xl mx-auto px-6 pb-24">
+        <div className="max-w-7xl mx-auto px-6 pb-12">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {items.map((item: any) => (
               <div key={item.id} className="group relative overflow-hidden bg-zinc-100 aspect-[2/3] cursor-pointer">
