@@ -406,10 +406,21 @@ export default function ProductPage() {
                     </div>
                   </div>
 
-                  <div className="border-t border-black/10 pt-4 mb-6">
+                  <div className="border-t border-black/10 pt-4 mb-6 space-y-1">
                     <div className="flex justify-between text-sm">
                       <span className="opacity-50">Total Items</span>
                       <span className="font-medium">{Object.values(sizeQtys).reduce((a, b) => a + b, 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="opacity-50">Total Price</span>
+                      <span className="font-medium">
+                        {(() => {
+                          const num = parseFloat((product?.price || '').replace(/[^0-9.]/g, ''));
+                          const total = num * Object.values(sizeQtys).reduce((a, b) => a + b, 0);
+                          const prefix = (product?.price || '').replace(/[\d.,]+/, '');
+                          return prefix + total.toFixed(2);
+                        })()}
+                      </span>
                     </div>
                   </div>
 
