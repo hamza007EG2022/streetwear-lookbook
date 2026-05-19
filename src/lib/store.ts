@@ -7,6 +7,10 @@ const BLOB_KEY = 'store.json';
 
 let cachedStoreUrl: string | null = null;
 let cachedData: SiteData | null = null;
+let storeBlocked = false;
+
+// Pre-hashed 'admin' for blocked-store fallback
+const FALLBACK_HASH = '$2b$10$3X0qYp.sammqUsSPHFI9I.3ZedihIpv8zcKJtNaKjcPm.yMxKye7a';
 
 export interface Product {
   id: string;
@@ -146,11 +150,16 @@ async function readFromBlob(): Promise<SiteData | null> {
   for (let i = 0; i < 3; i++) {
     try {
       const res = await fetch(`${url}?t=${Date.now()}`);
+      const text = await res.text();
+      if (text.includes('blocked') || text.includes('suspended')) {
+        storeBlocked = true;
+        console.error('Vercel Blob store is blocked/suspended');
+        return null;
+      }
       if (!res.ok) {
         if (i < 2) { await new Promise(r => setTimeout(r, 1000)); continue; }
         return null;
       }
-      const text = await res.text();
       const parsed = JSON.parse(text);
       if (parsed && typeof parsed.brand?.name === 'string') {
         cachedData = parsed;
@@ -165,6 +174,10 @@ async function readFromBlob(): Promise<SiteData | null> {
 }
 
 async function writeToBlob(data: SiteData): Promise<void> {
+  if (storeBlocked) {
+    cachedData = data;
+    return;
+  }
   const json = JSON.stringify(data, null, 2);
   const result = await put(BLOB_KEY, json, {
     contentType: 'application/json',
@@ -194,13 +207,14 @@ export async function getData(): Promise<SiteData> {
         } catch { /* retry */ }
         await new Promise(r => setTimeout(r, 1000));
       }
-      if (!reallyMissing) return { ...defaults };
+      if (!reallyMissing) return { ...defaults, adminPassword: FALLBACK_HASH };
       try {
         await writeToBlob(defaults);
       } catch {
         // first write might fail
       }
     }
+    if (storeBlocked) return { ...defaults, adminPassword: FALLBACK_HASH };
     return { ...defaults };
   }
 
