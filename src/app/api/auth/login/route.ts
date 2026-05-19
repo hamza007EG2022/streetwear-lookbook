@@ -14,6 +14,23 @@ export async function POST(req: NextRequest) {
     if (!data.adminPassword) {
       const exists = await blobExists();
       if (exists) {
+        // CDN may be stale — retry reading with delay
+        for (let i = 0; i < 3; i++) {
+          await new Promise(r => setTimeout(r, 1500));
+          const retry = await getData();
+          if (retry.adminPassword) {
+            const valid = await verifyPassword(password, retry.adminPassword);
+            if (!valid) {
+              return NextResponse.json({ error: "Invalid password" }, { status: 401 });
+            }
+            const token = await createSessionToken();
+            const res = NextResponse.json({ success: true, token });
+            res.cookies.set("admin_token", token, {
+              httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7,
+            });
+            return res;
+          }
+        }
         return NextResponse.json({ error: "Data not ready, please retry" }, { status: 503 });
       }
       const hashed = await hashPassword(password);

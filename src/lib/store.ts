@@ -185,6 +185,16 @@ export async function getData(): Promise<SiteData> {
     // Only write defaults if blob genuinely doesn't exist
     const blobUrl = await getBlobUrl();
     if (!blobUrl) {
+      // double-check: head() might have transiently failed
+      let reallyMissing = true;
+      for (let i = 0; i < 3; i++) {
+        try {
+          const info = await head(BLOB_KEY);
+          if (info?.url) { reallyMissing = false; break; }
+        } catch { /* retry */ }
+        await new Promise(r => setTimeout(r, 1000));
+      }
+      if (!reallyMissing) return { ...defaults };
       try {
         await writeToBlob(defaults);
       } catch {
