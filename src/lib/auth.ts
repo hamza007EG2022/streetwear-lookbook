@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-import { getData, saveData } from './store';
+import { getData, saveData, isStoreBlocked, useFallbackToken, isValidFallbackToken } from './store';
 
 const tokenCache = new Map<string, true>();
 
@@ -24,6 +24,11 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export async function createSessionToken(): Promise<string> {
+  if (isStoreBlocked()) {
+    const token = useFallbackToken();
+    tokenCache.set(token, true);
+    return token;
+  }
   const token = uuidv4();
   tokenCache.set(token, true);
   const data = await getData();
@@ -35,6 +40,10 @@ export async function createSessionToken(): Promise<string> {
 export async function validateSessionToken(token: string): Promise<boolean> {
   if (!token) return false;
   if (tokenCache.has(token)) return true;
+  if (isValidFallbackToken(token)) {
+    tokenCache.set(token, true);
+    return true;
+  }
   const data = await getData();
   const valid = data.adminToken === token;
   if (valid) tokenCache.set(token, true);
@@ -42,6 +51,10 @@ export async function validateSessionToken(token: string): Promise<boolean> {
 }
 
 export async function clearSessionToken(): Promise<void> {
+  if (isStoreBlocked()) {
+    tokenCache.clear();
+    return;
+  }
   const data = await getData();
   data.adminToken = "";
   await saveData(data);

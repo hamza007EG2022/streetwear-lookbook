@@ -11,6 +11,9 @@ let storeBlocked = false;
 
 // Pre-hashed 'admin' for blocked-store fallback
 const FALLBACK_HASH = '$2b$10$3X0qYp.sammqUsSPHFI9I.3ZedihIpv8zcKJtNaKjcPm.yMxKye7a';
+// Stable fallback token for blocked-store session persistence
+const FALLBACK_TOKEN = 'fallback-session-token-2026';
+const fallbackTokens = new Set<string>();
 
 export interface Product {
   id: string;
@@ -119,6 +122,20 @@ const defaults: SiteData = {
 
 function useBlob(): boolean {
   return !!process.env.BLOB_READ_WRITE_TOKEN;
+}
+
+export function isStoreBlocked(): boolean {
+  return storeBlocked;
+}
+
+export function useFallbackToken(): string {
+  const t = FALLBACK_TOKEN + '-' + Date.now();
+  fallbackTokens.add(t);
+  return t;
+}
+
+export function isValidFallbackToken(token: string): boolean {
+  return fallbackTokens.has(token);
 }
 
 export async function blobExists(): Promise<boolean> {
