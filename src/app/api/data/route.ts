@@ -1,25 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTokenFromRequest, validateSessionToken } from "@/lib/auth";
 import { getData, saveData } from "@/lib/store";
-import { head } from "@vercel/blob";
-
-const BLOB_KEY = 'store.json';
-
-async function verifyPasswordWrite(hash: string): Promise<boolean> {
-  for (let i = 0; i < 5; i++) {
-    try {
-      const info = await head(BLOB_KEY);
-      const res = await fetch(`${info.url}?t=${Date.now()}`);
-      if (res.ok) {
-        const text = await res.text();
-        const d = JSON.parse(text);
-        if (d.adminPassword === hash) return true;
-      }
-    } catch {}
-    await new Promise(r => setTimeout(r, 1000));
-  }
-  return false;
-}
 
 export async function GET() {
   const data = await getData();
@@ -38,7 +19,6 @@ export async function PUT(req: NextRequest) {
     const updates = await req.json();
     const data = await getData();
 
-    let passwordChanged = false;
     if (updates.brand) data.brand = { ...data.brand, ...updates.brand };
     if (updates.colors) data.colors = { ...data.colors, ...updates.colors };
     if (updates.hero) data.hero = { ...data.hero, ...updates.hero };
@@ -47,17 +27,9 @@ export async function PUT(req: NextRequest) {
     if (updates.password) {
       const bcrypt = await import("bcryptjs");
       data.adminPassword = await bcrypt.hash(updates.password, 10);
-      passwordChanged = true;
     }
 
     await saveData(data);
-
-    if (passwordChanged) {
-      const verified = await verifyPasswordWrite(data.adminPassword);
-      if (!verified) {
-        console.error("Password change: CDN verification failed after 5 retries");
-      }
-    }
 
     const { adminPassword, adminToken, chats, orders, encryptionKey, ...publicData } = data;
     return NextResponse.json(publicData);
