@@ -121,6 +121,8 @@ const defaults: SiteData = {
 };
 
 function useBlob(): boolean {
+  // On Vercel, prefer blob path (even if token is missing — blocked-store fallback handles that)
+  if (process.env.VERCEL) return true;
   return !!process.env.BLOB_READ_WRITE_TOKEN;
 }
 
@@ -163,7 +165,13 @@ async function getBlobUrl(): Promise<string | null> {
 async function readFromBlob(): Promise<SiteData | null> {
   if (cachedData) return cachedData;
   const url = await getBlobUrl();
-  if (!url) return null;
+  if (!url) {
+    if (process.env.VERCEL) {
+      storeBlocked = true;
+      console.error('Vercel Blob: no token or store unavailable');
+    }
+    return null;
+  }
   for (let i = 0; i < 3; i++) {
     try {
       const res = await fetch(`${url}?t=${Date.now()}`);
