@@ -28,7 +28,7 @@ export default function ProductPage() {
   const [selectedSize, setSelectedSize] = useState("");
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
-  const [orderQty, setOrderQty] = useState(1);
+  const [sizeQtys, setSizeQtys] = useState<Record<string, number>>({});
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [orderSubmitted, setOrderSubmitted] = useState(false);
@@ -86,7 +86,8 @@ export default function ProductPage() {
   }
 
   async function submitOrder() {
-    if (!customerName.trim() || !customerPhone.trim() || !selectedSize) return;
+    const items = Object.entries(sizeQtys).filter(([, qty]) => qty > 0).map(([size, qty]) => ({ size, quantity: qty }));
+    if (!customerName.trim() || !customerPhone.trim() || items.length === 0) return;
     setSubmitting(true);
     try {
       await fetch("/api/orders", {
@@ -95,7 +96,7 @@ export default function ProductPage() {
         body: JSON.stringify({
           productName: product.name,
           productPrice: product.price,
-          items: [{ size: selectedSize, quantity: orderQty }],
+          items,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
         }),
@@ -385,34 +386,30 @@ export default function ProductPage() {
                   </div>
 
                   <div className="mb-4">
-                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Size</p>
-                    <div className="flex gap-2">
-                      {product?.sizes?.map((s: string) => (
-                        <button key={s} onClick={() => setSelectedSize(s)}
-                          className={`px-3 py-1.5 text-xs border transition-colors ${
-                            selectedSize === s ? "bg-black text-white border-black" : "border-black/20"
-                          }`}>
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Quantity</p>
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => setOrderQty(Math.max(1, orderQty - 1))}
-                        className="w-8 h-8 border border-black/20 text-sm">−</button>
-                      <span className="text-sm font-medium w-6 text-center">{orderQty}</span>
-                      <button onClick={() => setOrderQty(orderQty + 1)}
-                        className="w-8 h-8 border border-black/20 text-sm">+</button>
+                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Sizes &amp; Quantity</p>
+                    <div className="space-y-2">
+                      {product?.sizes?.map((s: string) => {
+                        const qty = sizeQtys[s] || 0;
+                        return (
+                          <div key={s} className="flex items-center justify-between border border-black/10 px-3 py-2">
+                            <span className="text-sm font-medium w-10">{s}</span>
+                            <div className="flex items-center gap-3">
+                              <button onClick={() => setSizeQtys((prev) => ({ ...prev, [s]: Math.max(0, (prev[s] || 0) - 1) }))}
+                                className="w-7 h-7 border border-black/20 text-sm flex items-center justify-center hover:bg-zinc-100 transition-colors">−</button>
+                              <span className="text-sm font-medium w-5 text-center">{qty}</span>
+                              <button onClick={() => setSizeQtys((prev) => ({ ...prev, [s]: (prev[s] || 0) + 1 }))}
+                                className="w-7 h-7 border border-black/20 text-sm flex items-center justify-center hover:bg-zinc-100 transition-colors">+</button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
                   <div className="border-t border-black/10 pt-4 mb-6">
                     <div className="flex justify-between text-sm">
-                      <span className="opacity-50">Total</span>
-                      <span className="font-medium">{product?.price} × {orderQty}</span>
+                      <span className="opacity-50">Total Items</span>
+                      <span className="font-medium">{Object.values(sizeQtys).reduce((a, b) => a + b, 0)}</span>
                     </div>
                   </div>
 
@@ -427,7 +424,7 @@ export default function ProductPage() {
                       className="w-full border border-black/20 px-3 py-2 text-sm outline-none focus:border-black/60" />
                   </div>
 
-                  <button onClick={submitOrder} disabled={submitting || !selectedSize || !customerName.trim() || !customerPhone.trim()}
+                  <button onClick={submitOrder} disabled={submitting || Object.values(sizeQtys).every((q) => q === 0) || !customerName.trim() || !customerPhone.trim()}
                     className="w-full bg-black text-white py-3 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity disabled:opacity-30">
                     {submitting ? "Submitting..." : "Submit Order"}
                   </button>
