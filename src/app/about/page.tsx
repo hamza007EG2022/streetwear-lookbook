@@ -3,6 +3,21 @@
 import { useState, useEffect } from "react";
 import { usePublicData } from "@/components/DataContext";
 
+const values = [
+  {
+    title: "Quality",
+    desc: "Every stitch, every seam, every fabric is chosen with intention. We don't cut corners — we cut standards.",
+  },
+  {
+    title: "Style",
+    desc: "Minimal silhouettes, bold statements. Designed for those who move through the city with purpose.",
+  },
+  {
+    title: "Culture",
+    desc: "Rooted in the streets, built for the world. We celebrate the energy, the music, and the people who define urban life.",
+  },
+];
+
 export default function AboutPage() {
   const ctx = usePublicData();
   const [data, setData] = useState<any>(null);
@@ -30,12 +45,16 @@ export default function AboutPage() {
 
   return (
     <div className="pt-16 min-h-screen animate-fade-in">
-      <div className="max-w-5xl mx-auto px-6 py-16">
+      <div className="max-w-5xl mx-auto px-6 pt-16 pb-12">
         <h1 className="text-xs tracking-[0.3em] uppercase opacity-40 mb-4">About</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
           <div>
-            <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-8">{about.title || brand.name}</h2>
-            <div className="text-sm opacity-70 leading-relaxed max-w-md"><p>{about.text}</p></div>
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">{about.title || brand.name}</h2>
+            <div className="text-base text-black/80 leading-relaxed space-y-4">
+              <p>{about.text}</p>
+              <p>We believe streetwear is more than clothing — it&apos;s a statement. Every piece in the TRIO collection is built for the rhythm of urban life, combining sharp design with uncompromising durability.</p>
+              <p>From the underground to the forefront, our mission is to craft gear that moves with you. No logos for the sake of logos. No trends for the sake of trends. Just clean, intentional design that speaks for itself.</p>
+            </div>
           </div>
           <div className="space-y-4">
             {about.images && about.images.length > 0 ? (
@@ -47,6 +66,19 @@ export default function AboutPage() {
                 <span className="text-xs tracking-widest uppercase opacity-30">Brand Image</span>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-6 pb-16">
+        <div className="border-t border-black/10 pt-16">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            {values.map((v) => (
+              <div key={v.title}>
+                <p className="text-[10px] tracking-[0.35em] font-bold uppercase text-black/30 mb-3">{v.title}</p>
+                <p className="text-sm text-black/60 leading-relaxed">{v.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
