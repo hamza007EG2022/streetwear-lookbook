@@ -5,12 +5,12 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 
 const sizeChart = [
-  { label: "XS", chest: "34-36", waist: "28-30", length: "27" },
-  { label: "S", chest: "36-38", waist: "30-32", length: "28" },
-  { label: "M", chest: "38-40", waist: "32-34", length: "29" },
-  { label: "L", chest: "40-42", waist: "34-36", length: "30" },
-  { label: "XL", chest: "42-44", waist: "36-38", length: "31" },
-  { label: "XXL", chest: "44-46", waist: "38-40", length: "32" },
+  { label: "XS", chest: "86-91", waist: "71-76", length: "69" },
+  { label: "S", chest: "91-97", waist: "76-81", length: "71" },
+  { label: "M", chest: "97-102", waist: "81-86", length: "74" },
+  { label: "L", chest: "102-107", waist: "86-91", length: "76" },
+  { label: "XL", chest: "107-112", waist: "91-97", length: "79" },
+  { label: "XXL", chest: "112-117", waist: "97-102", length: "81" },
 ];
 
 const stockLabels: Record<string, { label: string; color: string }> = {
@@ -288,7 +288,7 @@ export default function ProductPage() {
               <h2 className="text-sm font-bold tracking-wider uppercase">Size Guide</h2>
               <button onClick={() => setShowSizeGuide(false)} className="text-sm opacity-30 hover:opacity-100">✕</button>
             </div>
-            <p className="text-[10px] tracking-widest uppercase opacity-30 mb-4">Measurements in inches</p>
+            <p className="text-[10px] tracking-widest uppercase opacity-30 mb-4">Measurements in centimeters</p>
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-black/10">
@@ -302,9 +302,9 @@ export default function ProductPage() {
                 {sizeChart.map((row) => (
                   <tr key={row.label} className="border-b border-black/5">
                     <td className="py-2 font-medium">{row.label}</td>
-                    <td className="py-2 opacity-60">{row.chest}"</td>
-                    <td className="py-2 opacity-60">{row.waist}"</td>
-                    <td className="py-2 opacity-60">{row.length}"</td>
+                    <td className="py-2 opacity-60">{row.chest} cm</td>
+                    <td className="py-2 opacity-60">{row.waist} cm</td>
+                    <td className="py-2 opacity-60">{row.length} cm</td>
                   </tr>
                 ))}
               </tbody>
