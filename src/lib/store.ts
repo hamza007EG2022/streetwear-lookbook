@@ -240,18 +240,28 @@ export async function getData(): Promise<SiteData> {
     const parsed = JSON.parse(content);
     return { ...defaults, ...parsed, colors: { ...defaults.colors, ...parsed.colors }, contact: { ...defaults.contact, ...parsed.contact } };
   } catch {
+    const onVercel = !!process.env.VERCEL;
+    if (onVercel) return { ...defaults, adminPassword: FALLBACK_HASH };
     return defaults;
   }
 }
 
 export async function saveData(data: SiteData): Promise<void> {
   data._updatedAt = Date.now();
+  if (storeBlocked) {
+    cachedData = data;
+    return;
+  }
   if (useBlob()) {
     await writeToBlob(data);
     return;
   }
 
-  const dir = path.dirname(DATA_PATH);
-  await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  try {
+    const dir = path.dirname(DATA_PATH);
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  } catch {
+    cachedData = data;
+  }
 }
