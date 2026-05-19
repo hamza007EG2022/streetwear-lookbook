@@ -31,7 +31,17 @@ export async function POST(req: NextRequest) {
             return res;
           }
         }
-        return NextResponse.json({ error: "Data not ready, please retry" }, { status: 503 });
+        // blob exists but truly has no password — treat as first-time setup
+        const hashed = await hashPassword(password);
+        const fresh = await getData();
+        fresh.adminPassword = hashed;
+        await saveData(fresh);
+        const token = await createSessionToken();
+        const res = NextResponse.json({ success: true, token });
+        res.cookies.set("admin_token", token, {
+          httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7,
+        });
+        return res;
       }
       const hashed = await hashPassword(password);
       data.adminPassword = hashed;
@@ -67,3 +77,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Server error", detail: msg }, { status: 500 });
   }
 }
+
