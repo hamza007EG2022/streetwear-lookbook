@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import Link from "next/link";
 
 export default function Footer() {
   const [brand, setBrand] = useState({ name: "BRAND" });
@@ -21,30 +20,24 @@ export default function Footer() {
 
   if (pathname.startsWith("/admin")) return null;
 
+  const footerBg = colors?.footer || "var(--brand-footer)";
+  const footerText = colors?.text || "var(--brand-text)";
+
   return (
-    <footer className="border-t border-white/10 py-16 px-6 mt-32 bg-black">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex flex-col items-center md:items-start gap-2">
-          <p className="text-2xl font-black tracking-[0.15em] uppercase text-white">
-            {brand.name}
-          </p>
-          <p className="text-[10px] tracking-[0.3em] uppercase text-white/20">
-            Since 2025
-          </p>
-        </div>
-        <div className="flex items-center gap-8">
-          <Link href="/lookbook" className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/30 hover:text-white transition-colors">
-            Lookbook
-          </Link>
-          <Link href="/about" className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/30 hover:text-white transition-colors">
-            About
-          </Link>
-          <Link href="/contact" className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/30 hover:text-white transition-colors">
-            Contact
-          </Link>
-        </div>
-        <p className="text-[10px] tracking-[0.2em] uppercase text-white/20">
+    <footer
+      className="border-t py-12 px-6 mt-24"
+      style={{
+        backgroundColor: footerBg,
+        color: footerText,
+        borderColor: `${footerText}1A`,
+      }}
+    >
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+        <p className="text-xs tracking-widest uppercase opacity-40" style={{ color: footerText }}>
           &copy; {new Date().getFullYear()} {brand.name}
+        </p>
+        <p className="text-xs tracking-widest uppercase opacity-40" style={{ color: footerText }}>
+          All rights reserved
         </p>
       </div>
     </footer>

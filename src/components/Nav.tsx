@@ -8,7 +8,6 @@ export default function Nav() {
   const [brand, setBrand] = useState({ name: "BRAND", logo: "", tagline: "" });
   const [colors, setColors] = useState<any>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -19,12 +18,6 @@ export default function Nav() {
         setColors(d.colors);
       })
       .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   if (pathname.startsWith("/admin")) return null;
@@ -41,12 +34,11 @@ export default function Nav() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? "bg-black/90 backdrop-blur-md" : "bg-transparent"
-      }`}
+      className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b border-black/5"
+      style={{ backgroundColor: navBg, color: navText }}
     >
-      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between border-b border-white/10">
-        <Link href="/" className="text-2xl font-black tracking-[0.15em] uppercase text-white">
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <Link href="/" className="text-xl font-bold tracking-[0.2em] uppercase" style={{ color: navText }}>
           {brand.name}
         </Link>
         <div className="hidden md:flex items-center gap-8">
@@ -54,33 +46,35 @@ export default function Nav() {
             <Link
               key={l.href}
               href={l.href}
-              className={`text-xs font-bold tracking-[0.25em] uppercase transition-all duration-300 hover:text-white/60 ${
-                pathname === l.href ? "text-white" : "text-white/40"
+              className={`text-sm tracking-widest uppercase transition-opacity hover:opacity-60 ${
+                pathname === l.href ? "opacity-100" : "opacity-50"
               }`}
+              style={{ color: navText }}
             >
               {l.label}
             </Link>
           ))}
         </div>
         <button
-          className="md:hidden flex flex-col gap-1.5"
+          className="md:hidden flex flex-col gap-1"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Menu"
         >
-          <span className={`block w-7 h-0.5 bg-white transition-transform ${menuOpen ? "rotate-45 translate-y-2" : ""}`} />
-          <span className={`block w-7 h-0.5 bg-white transition-opacity ${menuOpen ? "opacity-0" : ""}`} />
-          <span className={`block w-7 h-0.5 bg-white transition-transform ${menuOpen ? "-rotate-45 -translate-y-2" : ""}`} />
+          <span className="block w-6 h-px" style={{ backgroundColor: navText }} />
+          <span className="block w-6 h-px" style={{ backgroundColor: navText }} />
+          <span className="block w-6 h-px" style={{ backgroundColor: navText }} />
         </button>
       </div>
       {menuOpen && (
-        <div className="md:hidden bg-black/95 backdrop-blur-md border-t border-white/10">
-          <div className="px-6 py-6 flex flex-col gap-6">
+        <div className="md:hidden border-t border-black/5" style={{ backgroundColor: navBg }}>
+          <div className="px-6 py-4 flex flex-col gap-4">
             {links.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
                 onClick={() => setMenuOpen(false)}
-                className="text-sm font-bold tracking-[0.2em] uppercase text-white/70 hover:text-white transition-colors"
+                className="text-sm tracking-widest uppercase"
+                style={{ color: navText }}
               >
                 {l.label}
               </Link>

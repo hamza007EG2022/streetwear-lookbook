@@ -14,9 +14,9 @@ const sizeChart = [
 ];
 
 const stockLabels: Record<string, { label: string; color: string }> = {
-  in_stock: { label: "In Stock", color: "text-green-400" },
-  low_stock: { label: "Low Stock", color: "text-amber-400" },
-  out_of_stock: { label: "Sold Out", color: "text-red-400" },
+  in_stock: { label: "In Stock", color: "text-green-600" },
+  low_stock: { label: "Low Stock", color: "text-amber-600" },
+  out_of_stock: { label: "Sold Out", color: "text-red-600" },
 };
 
 export default function ProductPage() {
@@ -112,7 +112,7 @@ export default function ProductPage() {
   if (!data || !product) {
     return (
       <div className="pt-24 min-h-screen flex items-center justify-center">
-        <p className="text-xs tracking-widest uppercase text-white/30">Loading...</p>
+        <p className="text-xs tracking-widest uppercase opacity-30">Loading...</p>
       </div>
     );
   }
@@ -122,7 +122,7 @@ export default function ProductPage() {
   return (
     <div className="pt-20 min-h-screen">
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <Link href="/lookbook" className="text-[10px] tracking-widest uppercase text-white/30 hover:text-white/80 transition-colors">
+        <Link href="/lookbook" className="text-[10px] tracking-widest uppercase opacity-30 hover:opacity-100 transition-opacity">
           ← Back to Lookbook
         </Link>
       </div>
@@ -132,7 +132,7 @@ export default function ProductPage() {
           {/* Gallery */}
           <div>
             <div
-              className="relative aspect-[4/5] bg-zinc-900 overflow-hidden cursor-pointer group"
+              className="relative aspect-[4/5] bg-zinc-100 overflow-hidden cursor-pointer group"
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
               onClick={() => photos.length > 0 && setFullscreen(true)}
@@ -141,20 +141,20 @@ export default function ProductPage() {
                 <img src={currentPhoto} alt={product.name} className="w-full h-full object-cover transition-opacity duration-300" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-xs tracking-widest uppercase text-white/30">No Photo</span>
+                  <span className="text-xs tracking-widest uppercase opacity-30">No Photo</span>
                 </div>
               )}
               {photos.length > 1 && (
                 <>
                   {selectedPhoto > 0 && (
                     <button onClick={(e) => { e.stopPropagation(); goPrev(); }}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/60 flex items-center justify-center text-white text-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80">
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white">
                       ‹
                     </button>
                   )}
                   {selectedPhoto < photos.length - 1 && (
                     <button onClick={(e) => { e.stopPropagation(); goNext(); }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/60 flex items-center justify-center text-white text-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80">
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white">
                       ›
                     </button>
                   )}
@@ -174,8 +174,8 @@ export default function ProductPage() {
               <div className="flex gap-2 mt-2 overflow-x-auto pb-2">
                 {photos.map((url: string, i: number) => (
                   <button key={i} onClick={() => setSelectedPhoto(i)}
-                    className={`w-16 h-16 flex-shrink-0 bg-zinc-900 border-2 overflow-hidden transition-colors ${
-                      i === selectedPhoto ? "border-white" : "border-transparent opacity-50 hover:opacity-100"
+                    className={`w-16 h-16 flex-shrink-0 bg-zinc-100 border-2 overflow-hidden transition-colors ${
+                      i === selectedPhoto ? "border-black" : "border-transparent opacity-60 hover:opacity-100"
                     }`}>
                     <img src={url} alt="" className="w-full h-full object-cover" />
                   </button>
@@ -186,29 +186,29 @@ export default function ProductPage() {
 
           {/* Product Info */}
           <div className="flex flex-col">
-            <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-red-400 mb-2">{product.category}</p>
-            <h1 className="text-3xl md:text-5xl font-black tracking-tight mb-3">{product.name}</h1>
-            <p className="text-2xl font-bold mb-4">{product.price}</p>
+            <p className="text-[10px] tracking-[0.3em] uppercase opacity-40 mb-2">{product.category}</p>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">{product.name}</h1>
+            <p className="text-xl font-medium mb-4">{product.price}</p>
 
-            <p className={`text-xs font-bold tracking-wider uppercase mb-6 ${stockInfo.color}`}>
+            <p className={`text-xs tracking-wider uppercase mb-6 ${stockInfo.color}`}>
               {stockInfo.label}
             </p>
 
-            <p className="text-sm text-white/50 leading-relaxed mb-6">{product.description}</p>
+            <p className="text-sm opacity-60 leading-relaxed mb-6">{product.description}</p>
 
             {product.material && (
               <div className="mb-6">
-                <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/30 mb-1">Material</p>
-                <p className="text-sm text-white/70">{product.material}</p>
+                <p className="text-[10px] tracking-[0.3em] uppercase opacity-40 mb-1">Material</p>
+                <p className="text-sm">{product.material}</p>
               </div>
             )}
 
             {product.sizes && product.sizes.length > 0 && (
               <div className="mb-8">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/30">Available Sizes</p>
+                  <p className="text-[10px] tracking-[0.3em] uppercase opacity-40">Available Sizes</p>
                   <button onClick={() => setShowSizeGuide(true)}
-                    className="text-[10px] tracking-widest uppercase underline text-white/30 hover:text-white/80 transition-colors">
+                    className="text-[10px] tracking-widest uppercase underline opacity-40 hover:opacity-100">
                     Size Guide
                   </button>
                 </div>
@@ -217,8 +217,8 @@ export default function ProductPage() {
                     <button key={s} onClick={() => setSelectedSize(s)}
                       className={`px-4 py-2 text-xs tracking-widest uppercase border transition-colors ${
                         selectedSize === s
-                          ? "bg-white text-black border-white"
-                          : "border-white/20 text-white/60 hover:border-white/60"
+                          ? "bg-black text-white border-black"
+                          : "border-black/20 hover:border-black/60"
                       }`}>
                       {s}
                     </button>
@@ -228,7 +228,7 @@ export default function ProductPage() {
             )}
 
             <button onClick={() => setShowOrderModal(true)}
-              className="w-full md:w-auto bg-white text-black px-10 py-3 text-sm font-bold tracking-[0.2em] uppercase hover:bg-white/80 transition-all mt-auto">
+              className="w-full md:w-auto bg-black text-white px-10 py-3 text-sm tracking-[0.2em] uppercase hover:opacity-80 transition-opacity mt-auto">
               Contact to Order
             </button>
           </div>
@@ -237,23 +237,23 @@ export default function ProductPage() {
         {/* Related Products */}
         {related.length > 0 && (
           <div className="mt-24">
-            <p className="text-xs font-bold tracking-[0.3em] uppercase text-white/20 mb-8">Related Products</p>
+            <p className="text-xs tracking-[0.3em] uppercase opacity-30 mb-8">Related Products</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {related.slice(0, 4).map((p: any) => (
                 <Link key={p.id} href={`/products/${p.id}`}
-                  className="group block bg-zinc-900 border border-white/5 overflow-hidden">
-                  <div className="aspect-[3/4] bg-zinc-800 overflow-hidden">
+                  className="group block bg-zinc-50 border border-black/5 overflow-hidden">
+                  <div className="aspect-[3/4] bg-zinc-100 overflow-hidden">
                     {p.photos?.[0] ? (
                       <img src={p.photos[0]} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-[10px] tracking-widest uppercase text-white/20">No Photo</span>
+                        <span className="text-[10px] tracking-widest uppercase opacity-30">No Photo</span>
                       </div>
                     )}
                   </div>
                   <div className="p-3">
-                    <p className="text-xs font-medium truncate text-white/80">{p.name}</p>
-                    <p className="text-[10px] text-white/30 mt-0.5">{p.price}</p>
+                    <p className="text-xs font-medium truncate">{p.name}</p>
+                    <p className="text-[10px] opacity-40 mt-0.5">{p.price}</p>
                   </div>
                 </Link>
               ))}
@@ -310,53 +310,53 @@ export default function ProductPage() {
 
       {/* Size Guide Modal */}
       {showSizeGuide && (
-        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center" onClick={() => setShowSizeGuide(false)}>
-          <div className="bg-zinc-900 p-8 max-w-lg w-full mx-4 border border-white/10" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] bg-black/20 flex items-center justify-center" onClick={() => setShowSizeGuide(false)}>
+          <div className="bg-white p-8 max-w-lg w-full mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-sm font-bold tracking-wider uppercase text-white">Size Guide</h2>
-              <button onClick={() => setShowSizeGuide(false)} className="text-sm text-white/30 hover:text-white/80">✕</button>
+              <h2 className="text-sm font-bold tracking-wider uppercase">Size Guide</h2>
+              <button onClick={() => setShowSizeGuide(false)} className="text-sm opacity-30 hover:opacity-100">✕</button>
             </div>
-            <p className="text-[10px] font-bold tracking-widest uppercase text-white/20 mb-4">Measurements in centimeters</p>
-            <table className="w-full text-xs text-white/70">
+            <p className="text-[10px] tracking-widest uppercase opacity-30 mb-4">Measurements in centimeters</p>
+            <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left py-2 font-bold tracking-wider uppercase text-white/40">Size</th>
-                  <th className="text-left py-2 font-bold tracking-wider uppercase text-white/40">Chest</th>
-                  <th className="text-left py-2 font-bold tracking-wider uppercase text-white/40">Waist</th>
-                  <th className="text-left py-2 font-bold tracking-wider uppercase text-white/40">Length</th>
+                <tr className="border-b border-black/10">
+                  <th className="text-left py-2 font-medium tracking-wider uppercase">Size</th>
+                  <th className="text-left py-2 font-medium tracking-wider uppercase">Chest</th>
+                  <th className="text-left py-2 font-medium tracking-wider uppercase">Waist</th>
+                  <th className="text-left py-2 font-medium tracking-wider uppercase">Length</th>
                 </tr>
               </thead>
               <tbody>
                 {sizeChart.map((row) => (
-                  <tr key={row.label} className="border-b border-white/5">
-                    <td className="py-2 font-medium text-white">{row.label}</td>
-                    <td className="py-2 text-white/50">{row.chest} cm</td>
-                    <td className="py-2 text-white/50">{row.waist} cm</td>
-                    <td className="py-2 text-white/50">{row.length} cm</td>
+                  <tr key={row.label} className="border-b border-black/5">
+                    <td className="py-2 font-medium">{row.label}</td>
+                    <td className="py-2 opacity-60">{row.chest} cm</td>
+                    <td className="py-2 opacity-60">{row.waist} cm</td>
+                    <td className="py-2 opacity-60">{row.length} cm</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <p className="text-[10px] text-white/20 mt-4">Fit may vary by style. Contact us for exact measurements.</p>
+            <p className="text-[10px] opacity-30 mt-4">Fit may vary by style. Contact us for exact measurements.</p>
           </div>
         </div>
       )}
 
       {/* Order Modal */}
       {showOrderModal && (
-        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center" onClick={() => { setShowOrderModal(false); setOrderSubmitted(false); }}>
-          <div className="bg-zinc-900 p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto border border-white/10" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] bg-black/20 flex items-center justify-center" onClick={() => { setShowOrderModal(false); setOrderSubmitted(false); }}>
+          <div className="bg-white p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-sm font-bold tracking-wider uppercase text-white">Contact to Order</h2>
-              <button onClick={() => { setShowOrderModal(false); setOrderSubmitted(false); }} className="text-sm text-white/30 hover:text-white/80">✕</button>
+              <h2 className="text-sm font-bold tracking-wider uppercase">Contact to Order</h2>
+              <button onClick={() => { setShowOrderModal(false); setOrderSubmitted(false); }} className="text-sm opacity-30 hover:opacity-100">✕</button>
             </div>
 
             {orderSubmitted ? (
               <div className="text-center py-8">
-                <p className="text-lg font-bold text-white mb-2">Order Submitted</p>
-                <p className="text-xs text-white/50">We&apos;ll contact you at {customerPhone} to confirm.</p>
+                <p className="text-sm font-medium mb-2">Order Submitted</p>
+                <p className="text-xs opacity-50">We'll contact you at {customerPhone} to confirm.</p>
                 <button onClick={() => { setShowOrderModal(false); setOrderSubmitted(false); }}
-                  className="mt-6 bg-white text-black px-8 py-2 text-xs font-bold tracking-widest uppercase">
+                  className="mt-6 bg-black text-white px-8 py-2 text-xs tracking-widest uppercase">
                   Close
                 </button>
               </div>
@@ -364,42 +364,42 @@ export default function ProductPage() {
               <>
                 <div className="flex gap-3 mb-6">
                   <button onClick={contactWhatsApp}
-                    className="flex-1 bg-green-600 text-white px-4 py-3 text-xs font-bold tracking-widest uppercase hover:bg-green-700 transition-colors">
+                    className="flex-1 bg-green-600 text-white px-4 py-3 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity">
                     WhatsApp
                   </button>
                   <button
-                    className="flex-1 bg-white text-black px-4 py-3 text-xs font-bold tracking-widest uppercase">
+                    className="flex-1 bg-black text-white px-4 py-3 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity">
                     Order on Website
                   </button>
                 </div>
 
-                <div className="border-t border-white/10 pt-6">
-                  <p className="text-[10px] font-bold tracking-widest uppercase text-white/30 mb-4">Order Details</p>
+                <div className="border-t border-black/10 pt-6">
+                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-4">Order Details</p>
                   <div className="flex gap-4 mb-4">
                     {currentPhoto && (
-                      <img src={currentPhoto} alt="" className="w-16 h-20 object-cover bg-zinc-800" />
+                      <img src={currentPhoto} alt="" className="w-16 h-20 object-cover bg-zinc-100" />
                     )}
                     <div>
-                      <p className="text-sm font-medium text-white">{product?.name}</p>
-                      <p className="text-xs text-white/40 mt-0.5">{product?.price}</p>
+                      <p className="text-sm font-medium">{product?.name}</p>
+                      <p className="text-xs opacity-50 mt-0.5">{product?.price}</p>
                     </div>
                   </div>
 
                   <div className="mb-4">
-                    <p className="text-[10px] font-bold tracking-widest uppercase text-white/30 mb-2">Sizes &amp; Quantity</p>
+                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Sizes &amp; Quantity</p>
                     <div className="space-y-2">
                       {product?.sizes?.map((s: string) => {
                         const qty = sizeQtys[s] || 0;
                         return (
-                          <div key={s} className="flex items-center justify-between border border-white/10 px-3 py-2">
-                            <span className="text-sm font-medium text-white w-10">{s}</span>
-                            <span className="text-[10px] text-white/30">{product?.price}</span>
+                          <div key={s} className="flex items-center justify-between border border-black/10 px-3 py-2">
+                            <span className="text-sm font-medium w-10">{s}</span>
+                            <span className="text-[10px] opacity-40">{product?.price}</span>
                             <div className="flex items-center gap-3">
                               <button onClick={() => setSizeQtys((prev) => ({ ...prev, [s]: Math.max(0, (prev[s] || 0) - 1) }))}
-                                className="w-7 h-7 border border-white/20 text-sm text-white/70 flex items-center justify-center hover:bg-white/10 transition-colors">−</button>
-                              <span className="text-sm font-medium text-white w-5 text-center">{qty}</span>
+                                className="w-7 h-7 border border-black/20 text-sm flex items-center justify-center hover:bg-zinc-100 transition-colors">−</button>
+                              <span className="text-sm font-medium w-5 text-center">{qty}</span>
                               <button onClick={() => setSizeQtys((prev) => ({ ...prev, [s]: (prev[s] || 0) + 1 }))}
-                                className="w-7 h-7 border border-white/20 text-sm text-white/70 flex items-center justify-center hover:bg-white/10 transition-colors">+</button>
+                                className="w-7 h-7 border border-black/20 text-sm flex items-center justify-center hover:bg-zinc-100 transition-colors">+</button>
                             </div>
                           </div>
                         );
@@ -407,14 +407,14 @@ export default function ProductPage() {
                     </div>
                   </div>
 
-                  <div className="border-t border-white/10 pt-4 mb-6 space-y-1">
+                  <div className="border-t border-black/10 pt-4 mb-6 space-y-1">
                     <div className="flex justify-between text-sm">
-                      <span className="text-white/50">Total Items</span>
-                      <span className="font-medium text-white">{Object.values(sizeQtys).reduce((a, b) => a + b, 0)}</span>
+                      <span className="opacity-50">Total Items</span>
+                      <span className="font-medium">{Object.values(sizeQtys).reduce((a, b) => a + b, 0)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-white/50">Total Price</span>
-                      <span className="font-medium text-white">
+                      <span className="opacity-50">Total Price</span>
+                      <span className="font-medium">
                         {(() => {
                           const num = parseFloat((product?.price || '').replace(/[^0-9.]/g, ''));
                           const total = num * Object.values(sizeQtys).reduce((a, b) => a + b, 0);
@@ -425,19 +425,19 @@ export default function ProductPage() {
                     </div>
                   </div>
 
-                  <p className="text-[10px] font-bold tracking-widest uppercase text-white/30 mb-3">Your Contact</p>
+                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-3">Your Contact</p>
                   <div className="space-y-3 mb-6">
                     <input value={customerName} onChange={(e) => setCustomerName(e.target.value)}
                       placeholder="Your Name"
-                      className="w-full border border-white/20 bg-transparent px-3 py-2 text-sm text-white outline-none focus:border-white/60 placeholder-white/30" />
+                      className="w-full border border-black/20 px-3 py-2 text-sm outline-none focus:border-black/60" />
                     <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)}
                       placeholder="Phone Number"
                       type="tel"
-                      className="w-full border border-white/20 bg-transparent px-3 py-2 text-sm text-white outline-none focus:border-white/60 placeholder-white/30" />
+                      className="w-full border border-black/20 px-3 py-2 text-sm outline-none focus:border-black/60" />
                   </div>
 
                   <button onClick={submitOrder} disabled={submitting || Object.values(sizeQtys).every((q) => q === 0) || !customerName.trim() || !customerPhone.trim()}
-                    className="w-full bg-white text-black py-3 text-xs font-bold tracking-widest uppercase hover:bg-white/80 transition-opacity disabled:opacity-30">
+                    className="w-full bg-black text-white py-3 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity disabled:opacity-30">
                     {submitting ? "Submitting..." : "Submit Order"}
                   </button>
                 </div>
