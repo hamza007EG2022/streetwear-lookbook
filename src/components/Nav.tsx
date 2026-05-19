@@ -10,7 +10,6 @@ export default function Nav() {
   const [brand, setBrand] = useState(ctx?.brand || { name: "", logo: "", tagline: "" });
   const [colors, setColors] = useState<any>(ctx?.colors || null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -19,12 +18,6 @@ export default function Nav() {
       setColors(ctx.colors);
     }
   }, [ctx]);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   if (pathname.startsWith("/admin")) return null;
 
@@ -40,8 +33,8 @@ export default function Nav() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b border-black/10 shadow-sm transition-all duration-300`}
-      style={{ backgroundColor: scrolled ? undefined : navBg, color: navText }}
+      className="fixed top-0 left-0 right-0 z-50 border-b border-black/10 shadow-sm"
+      style={{ backgroundColor: navBg, color: navText }}
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="text-xl font-bold tracking-[0.2em] uppercase" style={{ color: navText }}>
