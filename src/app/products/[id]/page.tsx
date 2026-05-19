@@ -4,6 +4,21 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
+const sizeChart = [
+  { label: "XS", chest: "34-36", waist: "28-30", length: "27" },
+  { label: "S", chest: "36-38", waist: "30-32", length: "28" },
+  { label: "M", chest: "38-40", waist: "32-34", length: "29" },
+  { label: "L", chest: "40-42", waist: "34-36", length: "30" },
+  { label: "XL", chest: "42-44", waist: "36-38", length: "31" },
+  { label: "XXL", chest: "44-46", waist: "38-40", length: "32" },
+];
+
+const stockLabels: Record<string, { label: string; color: string }> = {
+  in_stock: { label: "In Stock", color: "text-green-600" },
+  low_stock: { label: "Low Stock", color: "text-amber-600" },
+  out_of_stock: { label: "Sold Out", color: "text-red-600" },
+};
+
 export default function ProductPage() {
   const params = useParams();
   const [data, setData] = useState<any>(null);
@@ -11,6 +26,7 @@ export default function ProductPage() {
   const [selectedPhoto, setSelectedPhoto] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
   const [selectedSize, setSelectedSize] = useState("");
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
   const touchStartX = useRef(0);
 
   useEffect(() => {
@@ -63,6 +79,8 @@ export default function ProductPage() {
     }
   }
 
+  const related = data?.products?.filter((p: any) => p.id !== product?.id && p.category === product?.category) || [];
+
   if (!data || !product) {
     return (
       <div className="pt-24 min-h-screen flex items-center justify-center">
@@ -70,6 +88,8 @@ export default function ProductPage() {
       </div>
     );
   }
+
+  const stockInfo = stockLabels[product.stock] || stockLabels.in_stock;
 
   return (
     <div className="pt-20 min-h-screen">
@@ -140,13 +160,30 @@ export default function ProductPage() {
           <div className="flex flex-col">
             <p className="text-[10px] tracking-[0.3em] uppercase opacity-40 mb-2">{product.category}</p>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">{product.name}</h1>
-            <p className="text-xl font-medium mb-6">{product.price}</p>
+            <p className="text-xl font-medium mb-4">{product.price}</p>
 
-            <p className="text-sm opacity-60 leading-relaxed mb-8">{product.description}</p>
+            <p className={`text-xs tracking-wider uppercase mb-6 ${stockInfo.color}`}>
+              {stockInfo.label}
+            </p>
+
+            <p className="text-sm opacity-60 leading-relaxed mb-6">{product.description}</p>
+
+            {product.material && (
+              <div className="mb-6">
+                <p className="text-[10px] tracking-[0.3em] uppercase opacity-40 mb-1">Material</p>
+                <p className="text-sm">{product.material}</p>
+              </div>
+            )}
 
             {product.sizes && product.sizes.length > 0 && (
               <div className="mb-8">
-                <p className="text-[10px] tracking-[0.3em] uppercase opacity-40 mb-3">Available Sizes</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] tracking-[0.3em] uppercase opacity-40">Available Sizes</p>
+                  <button onClick={() => setShowSizeGuide(true)}
+                    className="text-[10px] tracking-widest uppercase underline opacity-40 hover:opacity-100">
+                    Size Guide
+                  </button>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {product.sizes.map((s: string) => (
                     <button key={s} onClick={() => setSelectedSize(s)}
@@ -168,6 +205,33 @@ export default function ProductPage() {
             </button>
           </div>
         </div>
+
+        {/* Related Products */}
+        {related.length > 0 && (
+          <div className="mt-24">
+            <p className="text-xs tracking-[0.3em] uppercase opacity-30 mb-8">Related Products</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {related.slice(0, 4).map((p: any) => (
+                <Link key={p.id} href={`/products/${p.id}`}
+                  className="group block bg-zinc-50 border border-black/5 overflow-hidden">
+                  <div className="aspect-[3/4] bg-zinc-100 overflow-hidden">
+                    {p.photos?.[0] ? (
+                      <img src={p.photos[0]} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-[10px] tracking-widest uppercase opacity-30">No Photo</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="text-xs font-medium truncate">{p.name}</p>
+                    <p className="text-[10px] opacity-40 mt-0.5">{p.price}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Fullscreen Viewer */}
@@ -213,6 +277,40 @@ export default function ProductPage() {
           <p className="absolute bottom-6 right-6 text-white/30 text-xs">
             {selectedPhoto + 1} / {photos.length}
           </p>
+        </div>
+      )}
+
+      {/* Size Guide Modal */}
+      {showSizeGuide && (
+        <div className="fixed inset-0 z-[100] bg-black/20 flex items-center justify-center" onClick={() => setShowSizeGuide(false)}>
+          <div className="bg-white p-8 max-w-lg w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-sm font-bold tracking-wider uppercase">Size Guide</h2>
+              <button onClick={() => setShowSizeGuide(false)} className="text-sm opacity-30 hover:opacity-100">✕</button>
+            </div>
+            <p className="text-[10px] tracking-widest uppercase opacity-30 mb-4">Measurements in inches</p>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-black/10">
+                  <th className="text-left py-2 font-medium tracking-wider uppercase">Size</th>
+                  <th className="text-left py-2 font-medium tracking-wider uppercase">Chest</th>
+                  <th className="text-left py-2 font-medium tracking-wider uppercase">Waist</th>
+                  <th className="text-left py-2 font-medium tracking-wider uppercase">Length</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sizeChart.map((row) => (
+                  <tr key={row.label} className="border-b border-black/5">
+                    <td className="py-2 font-medium">{row.label}</td>
+                    <td className="py-2 opacity-60">{row.chest}"</td>
+                    <td className="py-2 opacity-60">{row.waist}"</td>
+                    <td className="py-2 opacity-60">{row.length}"</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="text-[10px] opacity-30 mt-4">Fit may vary by style. Contact us for exact measurements.</p>
+          </div>
         </div>
       )}
     </div>
