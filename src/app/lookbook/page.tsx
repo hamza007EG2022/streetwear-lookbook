@@ -30,16 +30,16 @@ export default function LookbookPage() {
 
   return (
     <div className="pt-16 min-h-screen animate-fade-in">
-      <div className="max-w-7xl mx-auto px-6 py-16">
+      <div className="max-w-7xl mx-auto px-6 pt-16 pb-8">
         <h1 className="text-xs tracking-[0.3em] uppercase opacity-40 mb-4">Lookbook</h1>
-        <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-16">The Collection</h2>
+        <h2 className="text-4xl md:text-6xl font-bold tracking-tight">The Collection</h2>
       </div>
       {items.length === 0 ? (
         <div className="max-w-7xl mx-auto px-6 pb-24">
-          <div className="image-grid">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i}
-                className={`bg-zinc-100 aspect-[3/4] flex items-center justify-center border border-zinc-200 ${i === 0 ? "tall" : ""} ${i === 3 ? "wide" : ""}`}>
+                className={`bg-zinc-100 aspect-[2/3] flex items-center justify-center border border-zinc-200 ${i === 0 ? "md:row-span-2" : ""} ${i === 3 ? "md:col-span-2" : ""}`}>
                 <span className="text-xs tracking-widest uppercase opacity-30">Photo {i + 1}</span>
               </div>
             ))}
@@ -47,9 +47,9 @@ export default function LookbookPage() {
         </div>
       ) : (
         <div className="max-w-7xl mx-auto px-6 pb-24">
-          <div className="image-grid">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {items.map((item: any) => (
-              <div key={item.id} className="group relative overflow-hidden bg-zinc-100 aspect-[3/4] cursor-pointer">
+              <div key={item.id} className="group relative overflow-hidden bg-zinc-100 aspect-[2/3] cursor-pointer">
                 <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
                   style={{ backgroundImage: `url(${item.photo})` }} />
                 {item.caption && (
