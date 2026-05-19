@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 type SiteData = any;
 
 const TABS = [
-  "Brand", "Colors", "Hero", "Products", "Lookbook", "About", "Contact", "Messages", "Password"
+  "Brand", "Colors", "Hero", "Products", "Lookbook", "About", "Contact", "Messages", "Orders", "Password"
 ];
 
 export default function DashboardPage() {
@@ -15,6 +15,7 @@ export default function DashboardPage() {
   const [tab, setTab] = useState("Brand");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [newOrders, setNewOrders] = useState(0);
   const router = useRouter();
 
   const checkAuth = useCallback(async () => {
@@ -28,6 +29,27 @@ export default function DashboardPage() {
   }, [router]);
 
   useEffect(() => { checkAuth(); }, [checkAuth]);
+
+  useEffect(() => {
+    if (!auth) return;
+    let knownCount = 0;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/orders", { credentials: "include" });
+        if (res.ok) {
+          const { orders } = await res.json();
+          if (tab !== "Orders" && orders.length > knownCount) {
+            setNewOrders(orders.length - knownCount);
+          }
+          if (tab === "Orders") {
+            setNewOrders(0);
+          }
+          knownCount = orders.length;
+        }
+      } catch {}
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [auth, tab]);
 
   async function saveField(path: string, value: any) {
     setSaving(true);
@@ -122,7 +144,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 flex">
-      <Sidebar tab={tab} setTab={setTab} msg={msg} saving={saving} />
+      <Sidebar tab={tab} setTab={setTab} msg={msg} saving={saving} newOrders={newOrders} setNewOrders={setNewOrders} />
       <div className="flex-1 ml-64 p-8">
         <div className="max-w-4xl">
           {tab === "Brand" && <BrandSection data={data} saveField={saveField} uploadFile={uploadFile} />}
@@ -133,6 +155,7 @@ export default function DashboardPage() {
           {tab === "About" && <AboutSection data={data} saveField={saveField} uploadFile={uploadFile} />}
           {tab === "Contact" && <ContactSection data={data} saveField={saveField} />}
           {tab === "Messages" && <MessagesSection />}
+          {tab === "Orders" && <OrdersSection />}
           {tab === "Password" && <PasswordSection />}
         </div>
       </div>
@@ -140,7 +163,7 @@ export default function DashboardPage() {
   );
 }
 
-function Sidebar({ tab, setTab, msg, saving }: any) {
+function Sidebar({ tab, setTab, msg, saving, newOrders, setNewOrders }: any) {
   return (
     <div className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-black/5 flex flex-col">
       <div className="p-6 border-b border-black/5">
@@ -151,12 +174,17 @@ function Sidebar({ tab, setTab, msg, saving }: any) {
         {TABS.map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
-            className={`w-full text-left px-4 py-2 text-xs tracking-widest uppercase rounded transition-colors ${
+            onClick={() => { setTab(t); if (t === "Orders") setNewOrders(0); }}
+            className={`w-full text-left px-4 py-2 text-xs tracking-widest uppercase rounded transition-colors flex items-center justify-between ${
               tab === t ? "bg-black text-white" : "hover:bg-zinc-100"
             }`}
           >
-            {t}
+            <span>{t}</span>
+            {t === "Orders" && newOrders > 0 && (
+              <span className="bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                {newOrders}
+              </span>
+            )}
           </button>
         ))}
       </nav>
@@ -761,6 +789,68 @@ function MessagesSection() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function OrdersSection() {
+  const [orders, setOrders] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/orders", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setOrders(d.orders || []))
+      .catch(() => {});
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/orders", { credentials: "include" });
+        if (res.ok) {
+          const d = await res.json();
+          setOrders(d.orders || []);
+        }
+      } catch {}
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-lg font-bold tracking-tight">Orders ({orders.length})</h2>
+      {orders.length === 0 ? (
+        <p className="text-xs opacity-30 italic">No orders yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {orders.map((o: any) => (
+            <div key={o.id} className="border border-black/5 bg-white rounded p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <p className="text-sm font-medium">{o.productName}</p>
+                  <p className="text-[10px] opacity-40 mt-0.5">
+                    {new Date(o.createdAt).toLocaleDateString()} {new Date(o.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+                <p className="text-xs font-medium">{o.productPrice} × {o.items.reduce((s: number, i: any) => s + (i.quantity || 0), 0)}</p>
+              </div>
+              <div className="flex flex-wrap gap-4 text-xs border-t border-black/5 pt-3">
+                <div>
+                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Customer</p>
+                  <p>{o.customerName}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Phone</p>
+                  <p>{o.customerPhone}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Items</p>
+                  {o.items.map((item: any, i: number) => (
+                    <p key={i}>{item.size} × {item.quantity}</p>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

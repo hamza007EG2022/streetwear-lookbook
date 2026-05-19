@@ -27,6 +27,12 @@ export default function ProductPage() {
   const [fullscreen, setFullscreen] = useState(false);
   const [selectedSize, setSelectedSize] = useState("");
   const [showSizeGuide, setShowSizeGuide] = useState(false);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [orderQty, setOrderQty] = useState(1);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [orderSubmitted, setOrderSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const touchStartX = useRef(0);
 
   useEffect(() => {
@@ -71,11 +77,32 @@ export default function ProductPage() {
     }
   }
 
-  function contactOrder() {
+  function contactWhatsApp() {
     if (product) {
       window.dispatchEvent(new CustomEvent("open-chat", {
         detail: { message: `I'm interested in: ${product.name} (${product.price})` },
       }));
+    }
+  }
+
+  async function submitOrder() {
+    if (!customerName.trim() || !customerPhone.trim() || !selectedSize) return;
+    setSubmitting(true);
+    try {
+      await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productName: product.name,
+          productPrice: product.price,
+          items: [{ size: selectedSize, quantity: orderQty }],
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
+        }),
+      });
+      setOrderSubmitted(true);
+    } catch {} finally {
+      setSubmitting(false);
     }
   }
 
@@ -199,7 +226,7 @@ export default function ProductPage() {
               </div>
             )}
 
-            <button onClick={contactOrder}
+            <button onClick={() => setShowOrderModal(true)}
               className="w-full md:w-auto bg-black text-white px-10 py-3 text-sm tracking-[0.2em] uppercase hover:opacity-80 transition-opacity mt-auto">
               Contact to Order
             </button>
@@ -310,6 +337,103 @@ export default function ProductPage() {
               </tbody>
             </table>
             <p className="text-[10px] opacity-30 mt-4">Fit may vary by style. Contact us for exact measurements.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Order Modal */}
+      {showOrderModal && (
+        <div className="fixed inset-0 z-[100] bg-black/20 flex items-center justify-center" onClick={() => { setShowOrderModal(false); setOrderSubmitted(false); }}>
+          <div className="bg-white p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-sm font-bold tracking-wider uppercase">Contact to Order</h2>
+              <button onClick={() => { setShowOrderModal(false); setOrderSubmitted(false); }} className="text-sm opacity-30 hover:opacity-100">✕</button>
+            </div>
+
+            {orderSubmitted ? (
+              <div className="text-center py-8">
+                <p className="text-sm font-medium mb-2">Order Submitted</p>
+                <p className="text-xs opacity-50">We'll contact you at {customerPhone} to confirm.</p>
+                <button onClick={() => { setShowOrderModal(false); setOrderSubmitted(false); }}
+                  className="mt-6 bg-black text-white px-8 py-2 text-xs tracking-widest uppercase">
+                  Close
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-3 mb-6">
+                  <button onClick={contactWhatsApp}
+                    className="flex-1 bg-green-600 text-white px-4 py-3 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity">
+                    WhatsApp
+                  </button>
+                  <button
+                    className="flex-1 bg-black text-white px-4 py-3 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity">
+                    Order on Website
+                  </button>
+                </div>
+
+                <div className="border-t border-black/10 pt-6">
+                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-4">Order Details</p>
+                  <div className="flex gap-4 mb-4">
+                    {currentPhoto && (
+                      <img src={currentPhoto} alt="" className="w-16 h-20 object-cover bg-zinc-100" />
+                    )}
+                    <div>
+                      <p className="text-sm font-medium">{product?.name}</p>
+                      <p className="text-xs opacity-50 mt-0.5">{product?.price}</p>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Size</p>
+                    <div className="flex gap-2">
+                      {product?.sizes?.map((s: string) => (
+                        <button key={s} onClick={() => setSelectedSize(s)}
+                          className={`px-3 py-1.5 text-xs border transition-colors ${
+                            selectedSize === s ? "bg-black text-white border-black" : "border-black/20"
+                          }`}>
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Quantity</p>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setOrderQty(Math.max(1, orderQty - 1))}
+                        className="w-8 h-8 border border-black/20 text-sm">−</button>
+                      <span className="text-sm font-medium w-6 text-center">{orderQty}</span>
+                      <button onClick={() => setOrderQty(orderQty + 1)}
+                        className="w-8 h-8 border border-black/20 text-sm">+</button>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-black/10 pt-4 mb-6">
+                    <div className="flex justify-between text-sm">
+                      <span className="opacity-50">Total</span>
+                      <span className="font-medium">{product?.price} × {orderQty}</span>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-3">Your Contact</p>
+                  <div className="space-y-3 mb-6">
+                    <input value={customerName} onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Your Name"
+                      className="w-full border border-black/20 px-3 py-2 text-sm outline-none focus:border-black/60" />
+                    <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)}
+                      placeholder="Phone Number"
+                      type="tel"
+                      className="w-full border border-black/20 px-3 py-2 text-sm outline-none focus:border-black/60" />
+                  </div>
+
+                  <button onClick={submitOrder} disabled={submitting || !selectedSize || !customerName.trim() || !customerPhone.trim()}
+                    className="w-full bg-black text-white py-3 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity disabled:opacity-30">
+                    {submitting ? "Submitting..." : "Submit Order"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

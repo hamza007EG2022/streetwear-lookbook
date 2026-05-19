@@ -54,6 +54,22 @@ export interface Chat {
   createdAt: number;
 }
 
+export interface OrderItem {
+  size: string;
+  quantity: number;
+}
+
+export interface Order {
+  id: string;
+  productName: string;
+  productPrice: string;
+  items: OrderItem[];
+  totalPrice: number;
+  customerName: string;
+  customerPhone: string;
+  createdAt: number;
+}
+
 export interface SiteData {
   _updatedAt?: number;
   brand: { name: string; logo: string; tagline: string };
@@ -64,6 +80,7 @@ export interface SiteData {
   about: { title: string; text: string; images: string[] };
   contact: { email: string; instagram: string; additional: string };
   chats: Chat[];
+  orders: Order[];
   encryptionKey: string;
   adminPassword: string;
   adminToken: string;
@@ -90,6 +107,7 @@ const defaults: SiteData = {
   about: { title: "OUR STORY", text: "Born from the streets, crafted for the bold.", images: [] },
   contact: { email: "hello@brand.com", instagram: "@brand", additional: "Based in New York City" },
   chats: [],
+  orders: [],
   encryptionKey: "",
   adminPassword: "",
   adminToken: "",
