@@ -3,21 +3,27 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { usePublicData } from "./DataContext";
 
 export default function Nav() {
-  const [brand, setBrand] = useState({ name: "BRAND", logo: "", tagline: "" });
-  const [colors, setColors] = useState<any>(null);
+  const ctx = usePublicData();
+  const [brand, setBrand] = useState(ctx?.brand || { name: "", logo: "", tagline: "" });
+  const [colors, setColors] = useState<any>(ctx?.colors || null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
-    fetch("/api/data")
-      .then((r) => r.json())
-      .then((d) => {
-        setBrand(d.brand);
-        setColors(d.colors);
-      })
-      .catch(() => {});
+    if (ctx) {
+      setBrand(ctx.brand);
+      setColors(ctx.colors);
+    }
+  }, [ctx]);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   if (pathname.startsWith("/admin")) return null;
@@ -34,12 +40,14 @@ export default function Nav() {
 
   return (
     <nav
-      className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b border-black/10"
-      style={{ backgroundColor: navBg, color: navText }}
+      className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b border-black/10 transition-all duration-300 ${
+        scrolled ? "bg-white/95" : ""
+      }`}
+      style={{ backgroundColor: scrolled ? undefined : navBg, color: navText }}
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="text-xl font-bold tracking-[0.2em] uppercase" style={{ color: navText }}>
-          {brand.name}
+          {brand.name || "TRIO"}
         </Link>
         <div className="hidden md:flex items-center gap-8">
           {links.map((l) => (

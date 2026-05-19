@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { usePublicData } from "@/components/DataContext";
 
 const sizeChart = [
   { label: "XS", chest: "86-91", waist: "71-76", length: "69" },
@@ -21,6 +22,7 @@ const stockLabels: Record<string, { label: string; color: string }> = {
 
 export default function ProductPage() {
   const params = useParams();
+  const ctx = usePublicData();
   const [data, setData] = useState<any>(null);
   const [product, setProduct] = useState<any>(null);
   const [selectedPhoto, setSelectedPhoto] = useState(0);
@@ -36,6 +38,11 @@ export default function ProductPage() {
   const touchStartX = useRef(0);
 
   useEffect(() => {
+    if (ctx) {
+      setData(ctx);
+      const p = ctx.products?.find((prod: any) => prod.id === params.id);
+      if (p) setProduct(p);
+    }
     fetch("/api/data")
       .then((r) => r.json())
       .then((d) => {
@@ -44,7 +51,7 @@ export default function ProductPage() {
         setProduct(p || null);
       })
       .catch(() => {});
-  }, [params.id]);
+  }, []);
 
   const photos = product?.photos || [];
   const currentPhoto = photos[selectedPhoto] || "";
@@ -111,8 +118,11 @@ export default function ProductPage() {
 
   if (!data || !product) {
     return (
-      <div className="pt-24 min-h-screen flex items-center justify-center">
-        <p className="text-xs tracking-widest uppercase opacity-30">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50">
+        <div className="animate-pulse text-center">
+          <div className="text-2xl font-black tracking-[0.15em] uppercase text-black/20 mb-3">TRIO</div>
+          <div className="w-6 h-6 border-2 border-black/10 border-t-black/40 rounded-full animate-spin mx-auto" />
+        </div>
       </div>
     );
   }
