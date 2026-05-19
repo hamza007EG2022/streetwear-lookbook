@@ -16,6 +16,8 @@ export interface Product {
   description: string;
   category: string;
   sizes: string[];
+  material?: string;
+  stock?: 'in_stock' | 'low_stock' | 'out_of_stock';
 }
 
 export interface LookbookItem {

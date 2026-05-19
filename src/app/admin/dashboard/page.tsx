@@ -389,13 +389,13 @@ function HeroSection({ data, saveField, uploadFile }: any) {
 function ProductsSection({ data, handleAction, uploadFile }: any) {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", price: "", description: "", category: "", photos: [] as string[], sizes: [] as string[] });
+  const [form, setForm] = useState({ name: "", price: "", description: "", category: "", material: "", stock: "in_stock" as string, photos: [] as string[], sizes: [] as string[] });
   const [sizeInput, setSizeInput] = useState("");
 
-  function resetForm() { setForm({ name: "", price: "", description: "", category: "", photos: [], sizes: [] }); }
+  function resetForm() { setForm({ name: "", price: "", description: "", category: "", material: "", stock: "in_stock", photos: [], sizes: [] }); }
 
   function editProduct(p: any) {
-    setForm({ name: p.name, price: p.price, description: p.description, category: p.category, photos: p.photos || [], sizes: p.sizes || [] });
+    setForm({ name: p.name, price: p.price, description: p.description, category: p.category, material: p.material || "", stock: p.stock || "in_stock", photos: p.photos || [], sizes: p.sizes || [] });
     setEditing(p);
     setShowForm(true);
   }
@@ -460,6 +460,16 @@ function ProductsSection({ data, handleAction, uploadFile }: any) {
               <Field label="Price" value={form.price} onChange={(v: string) => setForm({ ...form, price: v })} />
               <Field label="Category" value={form.category} onChange={(v: string) => setForm({ ...form, category: v })} />
               <Field label="Description" type="textarea" value={form.description} onChange={(v: string) => setForm({ ...form, description: v })} />
+              <Field label="Material" value={form.material} onChange={(v: string) => setForm({ ...form, material: v })} placeholder="e.g. 100% Cotton, Polyester Blend" />
+              <div className="space-y-1.5">
+                <label className="text-[10px] tracking-widest uppercase opacity-40">Stock Status</label>
+                <select value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                  className="w-full border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-black/40">
+                  <option value="in_stock">In Stock</option>
+                  <option value="low_stock">Low Stock</option>
+                  <option value="out_of_stock">Sold Out</option>
+                </select>
+              </div>
 
               <div className="space-y-1.5">
                 <label className="text-[10px] tracking-widest uppercase opacity-40">Photos (up to 6)</label>
