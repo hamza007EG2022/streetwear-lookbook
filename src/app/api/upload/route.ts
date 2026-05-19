@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTokenFromRequest, validateSessionToken } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import { put } from '@vercel/blob';
+import { getSupabase, useSupabase } from "@/lib/supabase";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 
@@ -22,6 +23,19 @@ export async function POST(req: NextRequest) {
     const ext = path.extname(file.name) || ".jpg";
     const filename = `${uuidv4()}${ext}`;
     const bytes = await file.arrayBuffer();
+
+    if (useSupabase()) {
+      const supabase = getSupabase()!;
+      const { data, error } = await supabase.storage
+        .from("images")
+        .upload(filename, Buffer.from(bytes), {
+          contentType: file.type || 'image/jpeg',
+          upsert: true,
+        });
+      if (error) throw new Error(error.message);
+      const { data: urlData } = supabase.storage.from("images").getPublicUrl(filename);
+      return NextResponse.json({ url: urlData.publicUrl });
+    }
 
     if (process.env.BLOB_READ_WRITE_TOKEN) {
       const buffer = Buffer.from(bytes);

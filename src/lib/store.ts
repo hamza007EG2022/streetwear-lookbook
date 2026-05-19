@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { put, head } from '@vercel/blob';
+import { getSupabase, useSupabase } from './supabase';
 
 const DATA_PATH = path.join(process.cwd(), 'data', 'store.json');
 const BLOB_KEY = 'store.json';
@@ -9,9 +10,7 @@ let cachedStoreUrl: string | null = null;
 let cachedData: SiteData | null = null;
 let storeBlocked = false;
 
-// Pre-hashed 'admin' for blocked-store fallback
 const FALLBACK_HASH = '$2b$10$3X0qYp.sammqUsSPHFI9I.3ZedihIpv8zcKJtNaKjcPm.yMxKye7a';
-// Stable fallback token for blocked-store session persistence
 const FALLBACK_TOKEN = 'fallback-session-token-2026';
 const fallbackTokens = new Set<string>();
 
@@ -121,7 +120,6 @@ const defaults: SiteData = {
 };
 
 function useBlob(): boolean {
-  // On Vercel, prefer blob path (even if token is missing — blocked-store fallback handles that)
   if (process.env.VERCEL) return true;
   return !!process.env.BLOB_READ_WRITE_TOKEN;
 }
@@ -139,6 +137,59 @@ export function useFallbackToken(): string {
 export function isValidFallbackToken(token: string): boolean {
   return fallbackTokens.has(token);
 }
+
+// ── Supabase ──────────────────────────────────────────────────────
+// Type helpers for the generic Supabase client
+type SB = ReturnType<typeof getSupabase>;
+async function sbFrom(supabase: NonNullable<SB>) {
+  return supabase.from("site_data") as any;
+}
+
+async function readFromSupabase(): Promise<SiteData | null> {
+  const supabase = getSupabase();
+  if (!supabase) return null;
+  const tbl = await sbFrom(supabase);
+  const { data, error } = await tbl.select("data").eq("id", "default").maybeSingle();
+  if (error || !data) return null;
+  const parsed = data.data as SiteData;
+  if (parsed && typeof parsed.brand?.name === 'string') {
+    cachedData = parsed;
+    return parsed;
+  }
+  return null;
+}
+
+async function writeToSupabase(d: SiteData): Promise<void> {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  d._updatedAt = Date.now();
+  const tbl = await sbFrom(supabase);
+  const { error } = await tbl.upsert({ id: "default", data: d, updated_at: Date.now() });
+  if (error) console.error("Supabase write error:", error);
+  else cachedData = d;
+}
+
+export async function ensureTablesExist(): Promise<void> {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  try {
+    await (supabase.rpc as any)("exec_sql", {
+      sql: `CREATE TABLE IF NOT EXISTS site_data (
+        id TEXT PRIMARY KEY DEFAULT 'default',
+        data JSONB NOT NULL DEFAULT '{}'::jsonb,
+        updated_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW()) * 1000
+      );
+      ALTER TABLE site_data ENABLE ROW LEVEL SECURITY;
+      DO $$ BEGIN CREATE POLICY "anon_all" ON site_data FOR ALL USING (true) WITH CHECK (true);
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;`
+    });
+  } catch {
+    const tbl = await sbFrom(supabase);
+    await tbl.select("id").limit(1).maybeSingle();
+  }
+}
+
+// ── Blob / local fallback (unchanged) ──────────────────────────────
 
 export async function blobExists(): Promise<boolean> {
   if (cachedStoreUrl) return true;
@@ -214,30 +265,42 @@ async function writeToBlob(data: SiteData): Promise<void> {
   cachedData = data;
 }
 
+// ── Public API ─────────────────────────────────────────────────────
+
+let tablesEnsured = false;
+
 export async function getData(): Promise<SiteData> {
+  if (useSupabase()) {
+    if (!tablesEnsured) {
+      await ensureTablesExist();
+      tablesEnsured = true;
+    }
+    const parsed = await readFromSupabase();
+    if (parsed) {
+      return { ...defaults, ...parsed, colors: { ...defaults.colors, ...parsed.colors }, contact: { ...defaults.contact, ...parsed.contact } };
+    }
+    return { ...defaults };
+  }
+
   if (useBlob()) {
     const parsed = await readFromBlob();
     if (parsed) {
       return { ...defaults, ...parsed, colors: { ...defaults.colors, ...parsed.colors }, contact: { ...defaults.contact, ...parsed.contact } };
     }
-    // Only write defaults if blob genuinely doesn't exist
     const blobUrl = await getBlobUrl();
     if (!blobUrl) {
-      // double-check: head() might have transiently failed
       let reallyMissing = true;
       for (let i = 0; i < 3; i++) {
         try {
           const info = await head(BLOB_KEY);
           if (info?.url) { reallyMissing = false; break; }
-        } catch { /* retry */ }
+        } catch {}
         await new Promise(r => setTimeout(r, 1000));
       }
       if (!reallyMissing) return { ...defaults, adminPassword: FALLBACK_HASH };
       try {
         await writeToBlob(defaults);
-      } catch {
-        // first write might fail
-      }
+      } catch {}
     }
     if (storeBlocked) return { ...defaults, adminPassword: FALLBACK_HASH };
     return { ...defaults };
@@ -256,6 +319,12 @@ export async function getData(): Promise<SiteData> {
 
 export async function saveData(data: SiteData): Promise<void> {
   data._updatedAt = Date.now();
+
+  if (useSupabase()) {
+    await writeToSupabase(data);
+    return;
+  }
+
   if (storeBlocked) {
     cachedData = data;
     return;
