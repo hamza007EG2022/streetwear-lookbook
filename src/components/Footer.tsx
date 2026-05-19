@@ -27,7 +27,7 @@ export default function Footer() {
 
   return (
     <footer
-      className="border-t py-16 px-6 mt-28"
+      className="border-t py-16 px-6 mt-16"
       style={{
         backgroundColor: footerBg,
         color: footerText,
