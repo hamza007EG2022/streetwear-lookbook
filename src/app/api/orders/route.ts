@@ -37,3 +37,19 @@ export async function GET(req: NextRequest) {
   const sorted = [...data.orders].sort((a, b) => b.createdAt - a.createdAt);
   return NextResponse.json({ orders: sorted });
 }
+
+export async function DELETE(req: NextRequest) {
+  const token = getTokenFromRequest(req);
+  const valid = token ? await validateSessionToken(token) : false;
+  if (!valid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const { id } = await req.json();
+    if (!id) return NextResponse.json({ error: "Missing order ID" }, { status: 400 });
+    const data = await getData();
+    data.orders = data.orders.filter((o: any) => o.id !== id);
+    await saveData(data);
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Failed to delete order" }, { status: 500 });
+  }
+}

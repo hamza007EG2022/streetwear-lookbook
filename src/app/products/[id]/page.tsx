@@ -393,6 +393,7 @@ export default function ProductPage() {
                         return (
                           <div key={s} className="flex items-center justify-between border border-black/10 px-3 py-2">
                             <span className="text-sm font-medium w-10">{s}</span>
+                            <span className="text-[10px] opacity-40">{product?.price}</span>
                             <div className="flex items-center gap-3">
                               <button onClick={() => setSizeQtys((prev) => ({ ...prev, [s]: Math.max(0, (prev[s] || 0) - 1) }))}
                                 className="w-7 h-7 border border-black/20 text-sm flex items-center justify-center hover:bg-zinc-100 transition-colors">−</button>

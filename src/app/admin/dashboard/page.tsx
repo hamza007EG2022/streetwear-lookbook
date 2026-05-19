@@ -813,6 +813,22 @@ function OrdersSection() {
     return () => clearInterval(interval);
   }, []);
 
+  async function deleteOrder(id: string) {
+    try {
+      const res = await fetch("/api/orders", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) setOrders((prev) => prev.filter((o) => o.id !== id));
+    } catch {}
+  }
+
+  function parsePrice(price: string): number {
+    return parseFloat((price || "").replace(/[^0-9.]/g, "")) || 0;
+  }
+
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-bold tracking-tight">Orders ({orders.length})</h2>
@@ -820,35 +836,51 @@ function OrdersSection() {
         <p className="text-xs opacity-30 italic">No orders yet.</p>
       ) : (
         <div className="space-y-3">
-          {orders.map((o: any) => (
-            <div key={o.id} className="border border-black/5 bg-white rounded p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-sm font-medium">{o.productName}</p>
-                  <p className="text-[10px] opacity-40 mt-0.5">
-                    {new Date(o.createdAt).toLocaleDateString()} {new Date(o.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </p>
+          {orders.map((o: any) => {
+            const unitPrice = parsePrice(o.productPrice);
+            return (
+              <div key={o.id} className="border border-black/5 bg-white rounded p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-medium">{o.productName}</p>
+                    <p className="text-[10px] opacity-40 mt-0.5">
+                      {new Date(o.createdAt).toLocaleDateString()} {new Date(o.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <p className="text-xs font-medium">{o.productPrice} × {o.items.reduce((s: number, i: any) => s + (i.quantity || 0), 0)}</p>
+                    <button onClick={() => deleteOrder(o.id)}
+                      className="text-[10px] tracking-widest uppercase text-red-500 hover:text-red-700 transition-colors">
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs font-medium">{o.productPrice} × {o.items.reduce((s: number, i: any) => s + (i.quantity || 0), 0)}</p>
+                <div className="flex flex-wrap gap-4 text-xs border-t border-black/5 pt-3">
+                  <div>
+                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Customer</p>
+                    <p>{o.customerName}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Phone</p>
+                    <p>{o.customerPhone}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Items</p>
+                    {o.items.map((item: any, i: number) => {
+                      const sub = (unitPrice * item.quantity).toFixed(2);
+                      return <p key={i}>{item.size} × {item.quantity} = {sub}</p>;
+                    })}
+                  </div>
+                  <div>
+                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Total</p>
+                    <p className="font-medium">
+                      {(o.totalPrice ?? (unitPrice * o.items.reduce((s: number, i: any) => s + (i.quantity || 0), 0))).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-4 text-xs border-t border-black/5 pt-3">
-                <div>
-                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Customer</p>
-                  <p>{o.customerName}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Phone</p>
-                  <p>{o.customerPhone}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Items</p>
-                  {o.items.map((item: any, i: number) => (
-                    <p key={i}>{item.size} × {item.quantity}</p>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
