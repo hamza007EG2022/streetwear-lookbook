@@ -17,12 +17,15 @@ export default function LookbookPage() {
   const items = data.lookbook || [];
 
   return (
-    <div className="pt-16 min-h-screen">
+    <div className="pt-20 min-h-screen">
       <div className="max-w-7xl mx-auto px-6 py-16">
-        <h1 className="text-xs tracking-[0.3em] uppercase opacity-40 mb-4">Lookbook</h1>
-        <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-16">
-          The Collection
-        </h2>
+        <p className="text-[10px] font-bold tracking-[0.4em] uppercase text-red-400 mb-4">Lookbook</p>
+        <div className="flex items-end justify-between">
+          <h2 className="text-5xl md:text-7xl font-black tracking-tight leading-none">
+            The Collection
+          </h2>
+          <p className="hidden md:block text-[10px] tracking-[0.3em] uppercase text-white/20">{items.length} Looks</p>
+        </div>
       </div>
 
       {items.length === 0 ? (
@@ -31,9 +34,9 @@ export default function LookbookPage() {
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className={`bg-zinc-100 aspect-[3/4] flex items-center justify-center border border-zinc-200 ${i === 0 ? "tall" : ""} ${i === 3 ? "wide" : ""}`}
+                className={`bg-zinc-900 aspect-[3/4] flex items-center justify-center ${i === 0 ? "tall" : ""} ${i === 3 ? "wide" : ""}`}
               >
-                <span className="text-xs tracking-widest uppercase opacity-30">
+                <span className="text-[10px] font-bold tracking-widest uppercase text-white/20">
                   Photo {i + 1}
                 </span>
               </div>
@@ -43,18 +46,19 @@ export default function LookbookPage() {
       ) : (
         <div className="max-w-7xl mx-auto px-6 pb-24">
           <div className="image-grid">
-            {items.map((item: any) => (
+            {items.map((item: any, i: number) => (
               <div
                 key={item.id}
-                className="group relative overflow-hidden bg-zinc-100 aspect-[3/4] cursor-pointer"
+                className="group relative overflow-hidden bg-zinc-900 aspect-[3/4] cursor-pointer"
               >
                 <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+                  className="absolute inset-0 bg-cover bg-center transition-all duration-700 group-hover:scale-110"
                   style={{ backgroundImage: `url(${item.photo})` }}
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 {item.caption && (
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-end p-6">
-                    <p className="text-white text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                    <p className="text-white text-xs font-bold tracking-wider opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       {item.caption}
                     </p>
                   </div>

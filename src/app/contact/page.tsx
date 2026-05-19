@@ -17,31 +17,27 @@ export default function ContactPage() {
   const { contact, brand } = data;
 
   return (
-    <div className="pt-16 min-h-screen">
+    <div className="pt-20 min-h-screen">
       <div className="max-w-5xl mx-auto px-6 py-16">
-        <h1 className="text-xs tracking-[0.3em] uppercase opacity-40 mb-4">
-          Contact
-        </h1>
+        <p className="text-[10px] font-bold tracking-[0.4em] uppercase text-red-400 mb-4">Contact</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
           <div>
-            <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-8">
+            <h2 className="text-5xl md:text-7xl font-black tracking-tight leading-none mb-6">
               Get in Touch
             </h2>
-            <p className="text-sm opacity-60 leading-relaxed mb-12 max-w-md">
+            <p className="text-sm text-white/40 max-w-md">
               For inquiries, collaborations, or just to say hello.
             </p>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-10">
             {contact.email && (
-              <div>
-                <h3 className="text-xs tracking-[0.3em] uppercase opacity-40 mb-2">
-                  Email
-                </h3>
+              <div className="border-l-2 border-white/10 pl-6">
+                <h3 className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/30 mb-3">Email</h3>
                 <a
                   href={`mailto:${contact.email}`}
-                  className="text-lg font-medium hover:opacity-60 transition-opacity"
+                  className="text-xl font-bold tracking-tight hover:text-white/60 transition-colors"
                 >
                   {contact.email}
                 </a>
@@ -49,15 +45,13 @@ export default function ContactPage() {
             )}
 
             {contact.instagram && (
-              <div>
-                <h3 className="text-xs tracking-[0.3em] uppercase opacity-40 mb-2">
-                  Instagram
-                </h3>
+              <div className="border-l-2 border-white/10 pl-6">
+                <h3 className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/30 mb-3">Instagram</h3>
                 <a
                   href={`https://instagram.com/${contact.instagram.replace("@", "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-lg font-medium hover:opacity-60 transition-opacity"
+                  className="text-xl font-bold tracking-tight hover:text-white/60 transition-colors"
                 >
                   {contact.instagram}
                 </a>
@@ -65,11 +59,9 @@ export default function ContactPage() {
             )}
 
             {contact.additional && (
-              <div>
-                <h3 className="text-xs tracking-[0.3em] uppercase opacity-40 mb-2">
-                  Info
-                </h3>
-                <p className="text-sm opacity-70">{contact.additional}</p>
+              <div className="border-l-2 border-white/10 pl-6">
+                <h3 className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/30 mb-3">Info</h3>
+                <p className="text-sm text-white/60">{contact.additional}</p>
               </div>
             )}
           </div>
