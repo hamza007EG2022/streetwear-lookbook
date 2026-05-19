@@ -7,6 +7,7 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import ThemeProvider from "@/components/ThemeProvider";
 import ChatWidget from "@/components/ChatWidget";
+import WhatsAppWidget from "@/components/WhatsAppWidget";
 import { DataProvider } from "@/components/DataContext";
 
 const geistSans = Geist({
@@ -41,6 +42,7 @@ export default async function RootLayout({
             <main className="flex-1">{children}</main>
             <Footer />
             <ChatWidget />
+            <WhatsAppWidget />
           </ThemeProvider>
         </DataProvider>
       </body>

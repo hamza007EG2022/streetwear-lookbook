@@ -78,7 +78,7 @@ export interface SiteData {
   products: Product[];
   lookbook: LookbookItem[];
   about: { title: string; text: string; images: string[] };
-  contact: { email: string; instagram: string; additional: string };
+  contact: { email: string; instagram: string; whatsapp: string; phone: string; additional: string };
   chats: Chat[];
   orders: Order[];
   encryptionKey: string;
@@ -105,7 +105,7 @@ const defaults: SiteData = {
   products: [],
   lookbook: [],
   about: { title: "OUR STORY", text: "Born from the streets, crafted for the bold.", images: [] },
-  contact: { email: "hello@brand.com", instagram: "@brand", additional: "Based in New York City" },
+  contact: { email: "hello@brand.com", instagram: "@brand", whatsapp: "", phone: "", additional: "Based in New York City" },
   chats: [],
   orders: [],
   encryptionKey: "",

@@ -651,6 +651,8 @@ function ContactSection({ data, saveField }: any) {
       <div className="space-y-4">
         <Field label="Email" value={data.contact.email} onChange={(v: string) => saveField("contact.email", v)} />
         <Field label="Instagram" value={data.contact.instagram} onChange={(v: string) => saveField("contact.instagram", v)} />
+        <Field label="WhatsApp Number" value={data.contact.whatsapp} onChange={(v: string) => saveField("contact.whatsapp", v)} placeholder="+201234567890" />
+        <Field label="Phone Number" value={data.contact.phone} onChange={(v: string) => saveField("contact.phone", v)} placeholder="+201234567890" />
         <Field label="Additional Info" type="textarea" value={data.contact.additional} onChange={(v: string) => saveField("contact.additional", v)} />
       </div>
     </div>

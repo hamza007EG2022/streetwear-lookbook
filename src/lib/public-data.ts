@@ -9,7 +9,7 @@ export interface PublicSiteData {
   products: any[];
   lookbook: any[];
   about: { title: string; text: string; images: string[] };
-  contact: { email: string; instagram: string; additional: string };
+  contact: { email: string; instagram: string; whatsapp: string; phone: string; additional: string };
 }
 
 export function stripSensitiveData(data: any): PublicSiteData {
