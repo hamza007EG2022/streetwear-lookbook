@@ -23,7 +23,7 @@ async function verifyPasswordWrite(hash: string): Promise<boolean> {
 
 export async function GET() {
   const data = await getData();
-  const { adminPassword, adminToken, chats, orders, encryptionKey, ...publicData } = data;
+  const { adminPassword, adminToken, chats, encryptionKey, ...publicData } = data;
   return NextResponse.json(publicData);
 }
 
@@ -59,7 +59,7 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    const { adminPassword, adminToken, chats, orders, encryptionKey, ...publicData } = data;
+    const { adminPassword, adminToken, chats, encryptionKey, ...publicData } = data;
     return NextResponse.json(publicData);
   } catch {
     return NextResponse.json({ error: "Failed to save" }, { status: 500 });
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
     }
 
     await saveData(data);
-    const { adminPassword, adminToken, chats, orders, encryptionKey, ...publicData } = data;
+    const { adminPassword, adminToken, chats, encryptionKey, ...publicData } = data;
     return NextResponse.json(publicData);
   } catch {
     return NextResponse.json({ error: "Failed to process" }, { status: 500 });

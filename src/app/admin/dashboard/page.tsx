@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 type SiteData = any;
 
 const TABS = [
-  "Brand", "Colors", "Hero", "Products", "Lookbook", "About", "Contact", "Messages", "Orders", "Password"
+  "Brand", "Colors", "Hero", "Products", "Lookbook", "About", "Contact", "Messages", "Password"
 ];
 
 export default function DashboardPage() {
@@ -15,7 +15,6 @@ export default function DashboardPage() {
   const [tab, setTab] = useState("Brand");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
-  const [newOrdersCount, setNewOrdersCount] = useState(0);
   const router = useRouter();
 
   const checkAuth = useCallback(async () => {
@@ -29,21 +28,6 @@ export default function DashboardPage() {
   }, [router]);
 
   useEffect(() => { checkAuth(); }, [checkAuth]);
-
-  useEffect(() => {
-    const check = async () => {
-      try {
-        const res = await fetch("/api/orders", { credentials: "include" });
-        if (res.ok) {
-          const d = await res.json();
-          setNewOrdersCount((d.orders || []).filter((o: any) => o.status === "new").length);
-        }
-      } catch {}
-    };
-    check();
-    const iv = setInterval(check, 10000);
-    return () => clearInterval(iv);
-  }, []);
 
   async function saveField(path: string, value: any) {
     setSaving(true);
@@ -138,7 +122,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 flex">
-      <Sidebar tab={tab} setTab={setTab} msg={msg} saving={saving} newOrdersCount={newOrdersCount} />
+      <Sidebar tab={tab} setTab={setTab} msg={msg} saving={saving} />
       <div className="flex-1 ml-64 p-8">
         <div className="max-w-4xl">
           {tab === "Brand" && <BrandSection data={data} saveField={saveField} uploadFile={uploadFile} />}
@@ -149,7 +133,6 @@ export default function DashboardPage() {
           {tab === "About" && <AboutSection data={data} saveField={saveField} uploadFile={uploadFile} />}
           {tab === "Contact" && <ContactSection data={data} saveField={saveField} />}
           {tab === "Messages" && <MessagesSection />}
-          {tab === "Orders" && <OrdersSection />}
           {tab === "Password" && <PasswordSection />}
         </div>
       </div>
@@ -157,7 +140,7 @@ export default function DashboardPage() {
   );
 }
 
-function Sidebar({ tab, setTab, msg, saving, newOrdersCount }: any) {
+function Sidebar({ tab, setTab, msg, saving }: any) {
   return (
     <div className="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-black/5 flex flex-col">
       <div className="p-6 border-b border-black/5">
@@ -169,14 +152,11 @@ function Sidebar({ tab, setTab, msg, saving, newOrdersCount }: any) {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`w-full flex items-center justify-between text-left px-4 py-2 text-xs tracking-widest uppercase rounded transition-colors ${
+            className={`w-full text-left px-4 py-2 text-xs tracking-widest uppercase rounded transition-colors ${
               tab === t ? "bg-black text-white" : "hover:bg-zinc-100"
             }`}
           >
-            <span>{t}</span>
-            {t === "Orders" && newOrdersCount > 0 && (
-              <span className="bg-blue-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold leading-none">{newOrdersCount}</span>
-            )}
+            {t}
           </button>
         ))}
       </nav>
@@ -781,165 +761,6 @@ function MessagesSection() {
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-const statusColors: Record<string, string> = {
-  new: "bg-blue-500",
-  confirmed: "bg-amber-500",
-  shipped: "bg-purple-500",
-  delivered: "bg-green-500",
-};
-
-const statusLabels: Record<string, string> = {
-  new: "New",
-  confirmed: "Confirmed",
-  shipped: "Shipped",
-  delivered: "Delivered",
-};
-
-const nextStatus: Record<string, string> = {
-  new: "confirmed",
-  confirmed: "shipped",
-  shipped: "delivered",
-  delivered: "delivered",
-};
-
-function OrdersSection() {
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<any>(null);
-  const [newCount, setNewCount] = useState(0);
-
-  async function loadOrders() {
-    try {
-      const res = await fetch("/api/orders", { credentials: "include" });
-      if (!res.ok) return;
-      const d = await res.json();
-      setOrders(d.orders || []);
-      setNewCount((d.orders || []).filter((o: any) => o.status === "new").length);
-    } catch {} finally { setLoading(false); }
-  }
-
-  useEffect(() => { loadOrders(); const iv = setInterval(loadOrders, 10000); return () => clearInterval(iv); }, []);
-
-  async function advanceStatus(id: string, current: string) {
-    const next = nextStatus[current];
-    if (next === current) return;
-    try {
-      await fetch("/api/orders", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ id, status: next }),
-      });
-      await loadOrders();
-      if (selected?.id === id) setSelected((prev: any) => prev ? { ...prev, status: next } : null);
-    } catch {}
-  }
-
-  if (loading) return <p className="text-xs opacity-30 italic">Loading orders...</p>;
-
-  return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold tracking-tight">Orders</h2>
-        {newCount > 0 && (
-          <span className="bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">{newCount} new</span>
-        )}
-      </div>
-
-      {orders.length === 0 ? (
-        <p className="text-xs opacity-30 italic">No orders yet.</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="border border-black/5 bg-white rounded overflow-y-auto" style={{ maxHeight: 500 }}>
-            {orders.map((order) => (
-              <button key={order.id} onClick={() => setSelected(order)}
-                className={`w-full text-left p-4 border-b border-black/5 hover:bg-zinc-50 transition-colors ${selected?.id === order.id ? "bg-zinc-100" : ""}`}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium truncate">{order.customerName}</span>
-                  <span className={`text-white text-[10px] px-1.5 py-0.5 rounded ${statusColors[order.status] || "bg-zinc-400"}`}>
-                    {statusLabels[order.status] || order.status}
-                  </span>
-                </div>
-                <p className="text-[11px] opacity-40 truncate">{order.productName} · {order.totalPrice?.toFixed(2)} EGP</p>
-                <p className="text-[10px] opacity-30 mt-1">{new Date(order.createdAt).toLocaleString()}</p>
-              </button>
-            ))}
-          </div>
-
-          <div className="md:col-span-2 border border-black/5 bg-white rounded p-6" style={{ maxHeight: 500, overflowY: "auto" }}>
-            {!selected ? (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-xs opacity-30 italic">Select an order</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-bold tracking-tight">{selected.customerName}</p>
-                  <span className={`text-white text-[10px] px-2 py-0.5 rounded ${statusColors[selected.status] || "bg-zinc-400"}`}>
-                    {statusLabels[selected.status] || selected.status}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Phone</p>
-                    <p>{selected.customerPhone}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Date</p>
-                    <p>{new Date(selected.createdAt).toLocaleString()}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Delivery Address</p>
-                  <p className="text-sm">{selected.deliveryAddress}</p>
-                </div>
-
-                {selected.note && (
-                  <div>
-                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Note</p>
-                    <p className="text-sm opacity-60">{selected.note}</p>
-                  </div>
-                )}
-
-                <div className="border-t border-black/5 pt-4">
-                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Items Ordered</p>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">{selected.productName} — {selected.productPrice}</p>
-                    {(selected.items || []).map((item: any, i: number) => (
-                      <p key={i} className="text-xs opacity-60">{item.size} × {item.quantity}</p>
-                    ))}
-                  </div>
-                  <p className="text-sm font-bold mt-2">Total: {selected.totalPrice?.toFixed(2)} EGP</p>
-                </div>
-
-                <div className="border-t border-black/5 pt-4">
-                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Update Status</p>
-                  <div className="flex gap-2">
-                    {(["new", "confirmed", "shipped", "delivered"] as const).map((s) => (
-                      <button key={s} onClick={() => advanceStatus(selected.id, selected.status)}
-                        disabled={selected.status === s || nextStatus[selected.status] !== s && selected.status !== s}
-                        className={`px-3 py-1.5 text-[10px] tracking-widest uppercase border transition-colors ${
-                          selected.status === s
-                            ? `${statusColors[s]} text-white border-transparent`
-                            : "border-black/10 hover:bg-zinc-50 disabled:opacity-20"
-                        }`}>
-                        {statusLabels[s]}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-[10px] opacity-30 mt-2">Click the next status to advance the order.</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

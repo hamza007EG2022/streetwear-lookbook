@@ -19,8 +19,6 @@ const stockLabels: Record<string, { label: string; color: string }> = {
   out_of_stock: { label: "Sold Out", color: "text-red-600" },
 };
 
-const allSizes = ["XS", "S", "M", "L", "XL", "XXL"];
-
 export default function ProductPage() {
   const params = useParams();
   const [data, setData] = useState<any>(null);
@@ -29,12 +27,6 @@ export default function ProductPage() {
   const [fullscreen, setFullscreen] = useState(false);
   const [selectedSize, setSelectedSize] = useState("");
   const [showSizeGuide, setShowSizeGuide] = useState(false);
-  const [showOrderModal, setShowOrderModal] = useState(false);
-  const [orderStep, setOrderStep] = useState<"choose" | "build" | "details" | "done">("choose");
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [form, setForm] = useState({ name: "", phone: "", address: "", note: "" });
-  const [submitting, setSubmitting] = useState(false);
-  const [orderError, setOrderError] = useState("");
   const touchStartX = useRef(0);
 
   useEffect(() => {
@@ -79,55 +71,11 @@ export default function ProductPage() {
     }
   }
 
-  function openOrderModal() {
-    const initial: Record<string, number> = {};
-    (product?.sizes || [...allSizes]).forEach((s: string) => { initial[s] = 0; });
-    setQuantities(initial);
-    setForm({ name: "", phone: "", address: "", note: "" });
-    setOrderStep("choose");
-    setOrderError("");
-    setShowOrderModal(true);
-  }
-
-  function totalItems(): number {
-    return Object.values(quantities).reduce((a, b) => a + b, 0);
-  }
-
-  function orderTotal(): number {
-    const price = parseFloat(product?.price?.replace(/[^0-9.]/g, "") || "0");
-    return totalItems() * price;
-  }
-
-  function selectedItems() {
-    return Object.entries(quantities).filter(([, q]) => q > 0).map(([size, q]) => ({ size, quantity: q }));
-  }
-
-  async function handleSubmitOrder() {
-    if (!form.name.trim() || !form.phone.trim() || !form.address.trim()) return;
-    setSubmitting(true);
-    setOrderError("");
-    try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId: product.id,
-          productName: product.name,
-          productPrice: product.price,
-          productPhoto: photos[0] || "",
-          items: selectedItems(),
-          customerName: form.name.trim(),
-          customerPhone: form.phone.trim(),
-          deliveryAddress: form.address.trim(),
-          note: form.note.trim(),
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to submit");
-      setOrderStep("done");
-    } catch {
-      setOrderError("Something went wrong. Please try again.");
-    } finally {
-      setSubmitting(false);
+  function contactOrder() {
+    if (product) {
+      window.dispatchEvent(new CustomEvent("open-chat", {
+        detail: { message: `I'm interested in: ${product.name} (${product.price})` },
+      }));
     }
   }
 
@@ -142,7 +90,6 @@ export default function ProductPage() {
   }
 
   const stockInfo = stockLabels[product.stock] || stockLabels.in_stock;
-  const priceNum = parseFloat(product.price?.replace(/[^0-9.]/g, "") || "0");
 
   return (
     <div className="pt-20 min-h-screen">
@@ -239,7 +186,7 @@ export default function ProductPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {product.sizes.map((s: string) => (
-                    <button key={s} onClick={() => { setSelectedSize(s); }}
+                    <button key={s} onClick={() => setSelectedSize(s)}
                       className={`px-4 py-2 text-xs tracking-widest uppercase border transition-colors ${
                         selectedSize === s
                           ? "bg-black text-white border-black"
@@ -252,7 +199,7 @@ export default function ProductPage() {
               </div>
             )}
 
-            <button onClick={openOrderModal}
+            <button onClick={contactOrder}
               className="w-full md:w-auto bg-black text-white px-10 py-3 text-sm tracking-[0.2em] uppercase hover:opacity-80 transition-opacity mt-auto">
               Contact to Order
             </button>
@@ -296,24 +243,40 @@ export default function ProductPage() {
           onTouchEnd={handleTouchEnd}
         >
           <button onClick={() => setFullscreen(false)}
-            className="absolute top-6 right-6 text-white/60 hover:text-white text-xl z-10">✕</button>
+            className="absolute top-6 right-6 text-white/60 hover:text-white text-xl z-10">
+            ✕
+          </button>
+
           {selectedPhoto > 0 && (
             <button onClick={(e) => { e.stopPropagation(); goPrev(); }}
-              className="absolute left-6 text-white/40 hover:text-white text-3xl z-10">‹</button>
+              className="absolute left-6 text-white/40 hover:text-white text-3xl z-10">
+              ‹
+            </button>
           )}
           {selectedPhoto < photos.length - 1 && (
             <button onClick={(e) => { e.stopPropagation(); goNext(); }}
-              className="absolute right-6 text-white/40 hover:text-white text-3xl z-10">›</button>
+              className="absolute right-6 text-white/40 hover:text-white text-3xl z-10">
+              ›
+            </button>
           )}
-          <img src={currentPhoto} alt={product.name}
-            className="max-w-[90vw] max-h-[90vh] object-contain" onClick={(e) => e.stopPropagation()} />
+
+          <img
+            src={currentPhoto}
+            alt={product.name}
+            className="max-w-[90vw] max-h-[90vh] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
             {photos.map((_: string, i: number) => (
               <button key={i} onClick={(e) => { e.stopPropagation(); setSelectedPhoto(i); }}
                 className={`w-2.5 h-2.5 rounded-full transition-colors ${i === selectedPhoto ? "bg-white" : "bg-white/30"}`} />
             ))}
           </div>
-          <p className="absolute bottom-6 right-6 text-white/30 text-xs">{selectedPhoto + 1} / {photos.length}</p>
+
+          <p className="absolute bottom-6 right-6 text-white/30 text-xs">
+            {selectedPhoto + 1} / {photos.length}
+          </p>
         </div>
       )}
 
@@ -347,174 +310,6 @@ export default function ProductPage() {
               </tbody>
             </table>
             <p className="text-[10px] opacity-30 mt-4">Fit may vary by style. Contact us for exact measurements.</p>
-          </div>
-        </div>
-      )}
-
-      {/* Order Modal */}
-      {showOrderModal && (
-        <div className="fixed inset-0 z-[100] bg-black/20 flex items-center justify-center" onClick={() => setShowOrderModal(false)}>
-          <div className="bg-white max-w-xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-black/5">
-              <div>
-                <h2 className="text-sm font-bold tracking-wider uppercase">Order</h2>
-                <p className="text-[10px] opacity-40 mt-0.5">{product.name} — {product.price}</p>
-              </div>
-              <button onClick={() => setShowOrderModal(false)} className="text-sm opacity-30 hover:opacity-100">✕</button>
-            </div>
-
-            {/* Step: Choose method */}
-            {orderStep === "choose" && (
-              <div className="p-6 space-y-4">
-                <p className="text-xs tracking-widest uppercase opacity-40">Choose how to order</p>
-                <button disabled
-                  className="w-full flex items-center gap-4 border border-black/10 p-4 text-left opacity-50 cursor-not-allowed">
-                  <span className="text-2xl">📱</span>
-                  <div>
-                    <p className="text-sm font-medium">Order via WhatsApp</p>
-                    <p className="text-[10px] opacity-40">Coming soon</p>
-                  </div>
-                </button>
-                <button onClick={() => setOrderStep("build")}
-                  className="w-full flex items-center gap-4 border border-black/10 p-4 text-left hover:bg-zinc-50 transition-colors">
-                  <span className="text-2xl">🛍️</span>
-                  <div>
-                    <p className="text-sm font-medium">Order via Website</p>
-                    <p className="text-[10px] opacity-40">Select sizes and checkout</p>
-                  </div>
-                </button>
-              </div>
-            )}
-
-            {/* Step 1: Build order */}
-            {orderStep === "build" && (
-              <div className="p-6">
-                <p className="text-[10px] tracking-widest uppercase opacity-40 mb-4">Step 1 of 2 — Select sizes & quantities</p>
-                <div className="space-y-3 mb-6">
-                  {(product.sizes || allSizes).map((size: string) => (
-                    <div key={size} className="flex items-center justify-between border-b border-black/5 pb-3">
-                      <span className="text-sm font-medium">{size}</span>
-                      <div className="flex items-center gap-3">
-                        <button onClick={() => setQuantities((prev) => ({ ...prev, [size]: Math.max(0, (prev[size] || 0) - 1) }))}
-                          className="w-8 h-8 border border-black/10 flex items-center justify-center text-sm hover:bg-zinc-50 transition-colors disabled:opacity-20"
-                          disabled={(quantities[size] || 0) === 0}>−</button>
-                        <span className="w-6 text-center text-sm font-medium">{quantities[size] || 0}</span>
-                        <button onClick={() => setQuantities((prev) => ({ ...prev, [size]: (prev[size] || 0) + 1 }))}
-                          className="w-8 h-8 border border-black/10 flex items-center justify-center text-sm hover:bg-zinc-50 transition-colors">+</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Live summary */}
-                <div className="bg-zinc-50 p-4 mb-6">
-                  {totalItems() === 0 ? (
-                    <p className="text-xs opacity-30 italic">Your order is empty</p>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Order Summary</p>
-                      {selectedItems().map(({ size, quantity }) => (
-                        <div key={size} className="flex justify-between text-xs">
-                          <span>{size} × {quantity}</span>
-                          <span className="opacity-60">{(priceNum * quantity).toFixed(2)} EGP</span>
-                        </div>
-                      ))}
-                      <div className="flex justify-between text-sm font-bold pt-2 border-t border-black/10">
-                        <span>Total</span>
-                        <span>{orderTotal().toFixed(2)} EGP</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <button onClick={() => setOrderStep("choose")}
-                    className="flex-1 border border-black/10 py-2 text-xs tracking-widest uppercase hover:bg-zinc-50">Back</button>
-                  <button onClick={() => setOrderStep("details")}
-                    disabled={totalItems() === 0}
-                    className="flex-1 bg-black text-white py-2 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed">
-                    Continue
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: Customer details */}
-            {orderStep === "details" && (
-              <div className="p-6">
-                <p className="text-[10px] tracking-widest uppercase opacity-40 mb-4">Step 2 of 2 — Your details</p>
-
-                {(product.sizes || []).length > 0 && (
-                  <div className="bg-zinc-50 p-3 mb-4 space-y-1">
-                    <p className="text-[10px] tracking-widest uppercase opacity-40">Order Summary</p>
-                    {selectedItems().map(({ size, quantity }) => (
-                      <p key={size} className="text-xs">{size} × {quantity}</p>
-                    ))}
-                    <p className="text-xs font-bold pt-1 border-t border-black/10">Total: {orderTotal().toFixed(2)} EGP</p>
-                  </div>
-                )}
-
-                <div className="space-y-3 mb-6">
-                  <div>
-                    <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      placeholder="Full Name *" className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/40" />
-                  </div>
-                  <div>
-                    <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                      placeholder="Phone Number *" type="tel" className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/40" />
-                  </div>
-                  <div>
-                    <textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
-                      placeholder="Delivery Address *" rows={3}
-                      className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/40 resize-none" />
-                  </div>
-                  <div>
-                    <textarea value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })}
-                      placeholder="Note or special request (optional)" rows={2}
-                      className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/40 resize-none" />
-                  </div>
-                </div>
-
-                {orderError && <p className="text-xs text-red-500 mb-4">{orderError}</p>}
-
-                <div className="flex gap-2">
-                  <button onClick={() => setOrderStep("build")}
-                    className="flex-1 border border-black/10 py-2 text-xs tracking-widest uppercase hover:bg-zinc-50">Back</button>
-                  <button onClick={handleSubmitOrder}
-                    disabled={!form.name.trim() || !form.phone.trim() || !form.address.trim() || submitting}
-                    className="flex-1 bg-black text-white py-2 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed">
-                    {submitting ? "Submitting..." : "Submit Order"}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Done */}
-            {orderStep === "done" && (
-              <div className="p-6 text-center">
-                <p className="text-3xl mb-4">✅</p>
-                <h3 className="text-lg font-bold tracking-tight mb-2">Order Placed!</h3>
-                <p className="text-sm opacity-60 mb-1">Thank you, {form.name}.</p>
-                <p className="text-sm opacity-60 mb-6">We'll contact you at {form.phone} soon to confirm.</p>
-
-                {selectedItems().length > 0 && (
-                  <div className="bg-zinc-50 p-4 mb-6 text-left max-w-xs mx-auto">
-                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Order Summary</p>
-                    {selectedItems().map(({ size, quantity }) => (
-                      <p key={size} className="text-xs">{size} × {quantity}</p>
-                    ))}
-                    <p className="text-xs font-bold pt-2 border-t border-black/10 mt-2">{orderTotal().toFixed(2)} EGP</p>
-                  </div>
-                )}
-
-                <button onClick={() => setShowOrderModal(false)}
-                  className="bg-black text-white px-8 py-2 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity">
-                  Continue Shopping
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}
