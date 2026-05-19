@@ -35,6 +35,7 @@ export default function ProductPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [nameError, setNameError] = useState("");
   const touchStartX = useRef(0);
 
   useEffect(() => {
@@ -92,9 +93,26 @@ export default function ProductPage() {
     }
   }
 
+  function validateFullName(name: string): string {
+    const trimmed = name.trim();
+    if (!trimmed) return "Please enter your full name";
+    const words = trimmed.split(/\s+/);
+    if (words.length < 3) return "Please enter your full name (First, Middle, Last)";
+    const arabicRegex = /^[\u0600-\u06FF]+$/;
+    const englishRegex = /^[A-Za-z]+$/;
+    for (const word of words) {
+      if (word.length < 2) return "Please enter your full name (First, Middle, Last)";
+      if (!arabicRegex.test(word) && !englishRegex.test(word)) return "Please enter your full name (First, Middle, Last)";
+    }
+    return "";
+  }
+
   async function submitOrder() {
     const items = Object.entries(sizeQtys).filter(([, qty]) => qty > 0).map(([size, qty]) => ({ size, quantity: qty }));
-    if (!customerName.trim() || !customerPhone.trim() || items.length === 0) return;
+    const err = validateFullName(customerName);
+    if (err) { setNameError(err); return; }
+    setNameError("");
+    if (!customerPhone.trim() || items.length === 0) return;
     setSubmitting(true);
     try {
       await fetch("/api/orders", {
@@ -387,11 +405,11 @@ export default function ProductPage() {
 
       {/* Order Modal */}
       {showOrderModal && (
-        <div className="fixed inset-0 z-[100] bg-black/20 flex items-center justify-center" onClick={() => { setShowOrderModal(false); setOrderSubmitted(false); }}>
+        <div className="fixed inset-0 z-[100] bg-black/20 flex items-center justify-center" onClick={() => { setShowOrderModal(false); setOrderSubmitted(false); setNameError(""); }}>
           <div className="bg-white p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-sm font-bold tracking-wider uppercase">Contact to Order</h2>
-              <button onClick={() => { setShowOrderModal(false); setOrderSubmitted(false); }} className="text-sm opacity-30 hover:opacity-100">✕</button>
+              <button onClick={() => { setShowOrderModal(false); setOrderSubmitted(false); setNameError(""); }} className="text-sm opacity-30 hover:opacity-100">✕</button>
             </div>
 
             {orderSubmitted ? (
@@ -470,16 +488,21 @@ export default function ProductPage() {
 
                   <p className="text-[10px] tracking-widest uppercase opacity-40 mb-3">Your Contact</p>
                   <div className="space-y-3 mb-6">
-                    <input value={customerName} onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="Your Name"
-                      className="w-full border border-black/20 px-3 py-2 text-sm outline-none focus:border-black/60" />
+                    <div>
+                      <input value={customerName} onChange={(e) => { setCustomerName(e.target.value); setNameError(""); }}
+                        placeholder="Full Name (First, Middle, Last)"
+                        className={`w-full border px-3 py-2 text-sm outline-none ${
+                          nameError ? "border-red-400 focus:border-red-500" : "border-black/20 focus:border-black/60"
+                        }`} />
+                      {nameError && <p className="text-[10px] text-red-500 mt-1">{nameError}</p>}
+                    </div>
                     <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)}
                       placeholder="Phone Number"
                       type="tel"
                       className="w-full border border-black/20 px-3 py-2 text-sm outline-none focus:border-black/60" />
                   </div>
 
-                  <button onClick={submitOrder} disabled={submitting || Object.values(sizeQtys).every((q) => q === 0) || !customerName.trim() || !customerPhone.trim()}
+                  <button onClick={submitOrder} disabled={submitting}
                     className="w-full bg-black text-white py-3 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity disabled:opacity-30">
                     {submitting ? "Submitting..." : "Submit Order"}
                   </button>
