@@ -48,7 +48,7 @@ export default function HomeClient({ initialData }: { initialData: PublicSiteDat
       </section>
 
       {products.length > 0 && (
-        <section className="max-w-7xl mx-auto px-6 py-24">
+        <section className="max-w-7xl mx-auto px-6 pt-12 pb-24">
           <div className="flex items-center justify-between mb-12">
             <h2 className="text-xs tracking-[0.35em] font-bold uppercase text-black/40">Our Collection</h2>
             <Link href="/lookbook" className="text-[10px] tracking-[0.3em] uppercase text-black/30 hover:text-black/60 transition-colors">
