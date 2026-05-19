@@ -40,7 +40,7 @@ export default function HomePage() {
           <div className="mt-10 animate-fade-in-delay-2">
             <Link
               href="/lookbook"
-              className="inline-block border border-white/30 text-white px-10 py-3 text-sm tracking-[0.2em] uppercase transition-all hover:bg-white hover:text-black"
+              className="inline-block border border-white/30 text-white px-10 py-3 text-sm tracking-[0.2em] uppercase rounded-full transition-all duration-500 hover:bg-white hover:text-black hover:scale-105"
             >
               Explore Collection
             </Link>
