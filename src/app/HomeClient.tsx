@@ -136,7 +136,8 @@ export default function HomeClient({ initialData }: { initialData: PublicSiteDat
               const variantPhoto = ad >= 0 && p.colorVariants?.[ad]?.photos?.[0] ? p.colorVariants[ad].photos[0] : null;
               const mainPhoto = variantPhoto || p.photos?.[0] || "";
               return (
-              <div key={p.id} className="group animate-fade-in-up" style={{ animationDelay: `${idx * 0.08}s` }}>
+              <div key={p.id} className="group animate-fade-in-up cursor-pointer" style={{ animationDelay: `${idx * 0.08}s` }}
+                onClick={() => router.push(`/products/${p.id}`)}>
                 <div className="relative overflow-hidden bg-zinc-100 aspect-[3/4]"
                   onMouseEnter={() => setCardHovered({...cardHovered, [p.id]: true})}
                   onMouseLeave={() => { setCardHovered({...cardHovered, [p.id]: false}); setActiveDot({...activeDot, [p.id]: -1}); }}
@@ -154,7 +155,7 @@ export default function HomeClient({ initialData }: { initialData: PublicSiteDat
                   )}
                   {/* CHOOSE OPTIONS button */}
                   <div className="absolute bottom-0 left-0 right-0 z-20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out">
-                    <button onClick={() => { setQuickViewProduct(p); setQvColorIdx(-1); setQvPhotoIdx(0); setQvSize(""); }}
+                    <button onClick={(e) => { e.stopPropagation(); setQuickViewProduct(p); setQvColorIdx(-1); setQvPhotoIdx(0); setQvSize(""); }}
                       className="w-full bg-black text-white text-center py-3 text-xs tracking-[0.25em] uppercase">
                       CHOOSE OPTIONS
                     </button>

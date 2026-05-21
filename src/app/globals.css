@@ -31,6 +31,7 @@ body {
   font-family: var(--font-geist-sans), "Helvetica Neue", Arial, sans-serif;
   background-color: var(--brand-background);
   color: var(--brand-text);
+  overflow-x: hidden;
 }
 
 ::selection {
