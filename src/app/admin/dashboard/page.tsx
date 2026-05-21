@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 type SiteData = any;
 
 const TABS = [
-  "Brand", "Colors", "Hero", "Products", "Lookbook", "About", "Contact", "Messages", "Orders", "Password"
+  "Brand", "Colors", "Hero", "Products", "Lookbook", "Collections", "Marquee", "Reviews", "Pages", "Banners", "Newsletter", "About", "Contact", "Tasks", "Messages", "Orders", "Password"
 ];
 
 export default function DashboardPage() {
@@ -152,8 +152,15 @@ export default function DashboardPage() {
           {tab === "Hero" && <HeroSection data={data} saveField={saveField} uploadFile={uploadFile} />}
           {tab === "Products" && <ProductsSection data={data} handleAction={handleAction} uploadFile={uploadFile} />}
           {tab === "Lookbook" && <LookbookSection data={data} handleAction={handleAction} uploadFile={uploadFile} />}
+          {tab === "Collections" && <CollectionsSection data={data} handleAction={handleAction} uploadFile={uploadFile} />}
+          {tab === "Marquee" && <MarqueeSection data={data} saveField={saveField} />}
+          {tab === "Reviews" && <ReviewsSection data={data} handleAction={handleAction} uploadFile={uploadFile} />}
+          {tab === "Pages" && <PagesSection data={data} saveField={saveField} />}
+          {tab === "Banners" && <BannersSection data={data} saveField={saveField} uploadFile={uploadFile} />}
+          {tab === "Newsletter" && <NewsletterSection data={data} />}
           {tab === "About" && <AboutSection data={data} saveField={saveField} uploadFile={uploadFile} />}
           {tab === "Contact" && <ContactSection data={data} saveField={saveField} />}
+          {tab === "Tasks" && <TasksSection data={data} saveField={saveField} saveAll={saveAll} />}
           {tab === "Messages" && <MessagesSection />}
           {tab === "Orders" && <OrdersSection />}
           {tab === "Password" && <PasswordSection />}
@@ -205,7 +212,7 @@ function Sidebar({ tab, setTab, msg, saving, newOrders, setNewOrders }: any) {
   );
 }
 
-function Field({ label, value, onChange, type = "text", placeholder }: any) {
+function Field({ label, value, onChange, type = "text", placeholder, rows }: any) {
   return (
     <div className="space-y-1">
       <label className="text-[10px] tracking-widest uppercase opacity-40">{label}</label>
@@ -214,7 +221,7 @@ function Field({ label, value, onChange, type = "text", placeholder }: any) {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          rows={4}
+          rows={rows || 4}
           className="w-full border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:border-black/40 transition-colors resize-none"
         />
       ) : type === "color" ? (
@@ -431,14 +438,14 @@ const GENDER_OPTIONS = [
 function ProductsSection({ data, handleAction, uploadFile }: any) {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", price: "", discountPrice: "", description: "", category: "", material: "", stock: "in_stock" as string, badge: "none" as string, gender: "unisex" as string, priority: 0, visible: true, photos: [] as string[], sizes: [] as string[], stockPerSize: {} as Record<string, number> });
+  const [form, setForm] = useState({ name: "", price: "", discountPrice: "", description: "", category: "", material: "", stock: "in_stock" as string, badge: "none" as string, gender: "unisex" as string, priority: 0, visible: true, photos: [] as string[], sizes: [] as string[], stockPerSize: {} as Record<string, number>, colorVariants: [] as { label: string; color: string; photos: string[] }[] });
   const [sizeInput, setSizeInput] = useState("");
   const [sizeStock, setSizeStock] = useState("");
 
-  function resetForm() { setForm({ name: "", price: "", discountPrice: "", description: "", category: "", material: "", stock: "in_stock", badge: "none", gender: "unisex", priority: 0, visible: true, photos: [], sizes: [], stockPerSize: {} }); }
+  function resetForm() { setForm({ name: "", price: "", discountPrice: "", description: "", category: "", material: "", stock: "in_stock", badge: "none", gender: "unisex", priority: 0, visible: true, photos: [], sizes: [], stockPerSize: {}, colorVariants: [] }); }
 
   function editProduct(p: any) {
-    setForm({ name: p.name, price: p.price, discountPrice: p.discountPrice || "", description: p.description, category: p.category, material: p.material || "", stock: p.stock || "in_stock", badge: p.badge || "none", gender: p.gender || "unisex", priority: p.priority || 0, visible: p.visible !== false, photos: p.photos || [], sizes: p.sizes || [], stockPerSize: p.stockPerSize || {} });
+    setForm({ name: p.name, price: p.price, discountPrice: p.discountPrice || "", description: p.description, category: p.category, material: p.material || "", stock: p.stock || "in_stock", badge: p.badge || "none", gender: p.gender || "unisex", priority: p.priority || 0, visible: p.visible !== false, photos: p.photos || [], sizes: p.sizes || [], stockPerSize: p.stockPerSize || {}, colorVariants: p.colorVariants || [] });
     setEditing(p);
     setShowForm(true);
   }
@@ -611,6 +618,61 @@ function ProductsSection({ data, handleAction, uploadFile }: any) {
                 </div>
               </div>
 
+              {/* Color Variants */}
+              <div className="space-y-2 pt-2 border-t border-black/5">
+                <label className="text-[10px] tracking-widest uppercase opacity-40">Color Variants</label>
+                {form.colorVariants.map((cv: { label: string; color: string; photos: string[] }, vi: number) => (
+                  <div key={vi} className="border border-black/10 p-2 space-y-1.5 bg-zinc-50">
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={cv.color} onChange={(e) => {
+                        const arr = [...form.colorVariants];
+                        arr[vi] = { ...arr[vi], color: e.target.value };
+                        setForm({ ...form, colorVariants: arr });
+                      }} className="w-7 h-7 p-0 border border-black/10 cursor-pointer" />
+                      <input type="text" value={cv.label} onChange={(e) => {
+                        const arr = [...form.colorVariants];
+                        arr[vi] = { ...arr[vi], label: e.target.value };
+                        setForm({ ...form, colorVariants: arr });
+                      }} placeholder="e.g. Black" className="flex-1 border border-black/10 bg-white px-2 py-1 text-xs outline-none focus:border-black/40" />
+                      <button type="button" onClick={() => {
+                        setForm({ ...form, colorVariants: form.colorVariants.filter((_: any, i: number) => i !== vi) });
+                      }} className="text-red-400 hover:text-red-600 text-xs px-1">✕</button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {cv.photos.map((url: string, pi: number) => (
+                        <div key={pi} className="relative w-12 h-12 bg-zinc-100 border border-black/5">
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                          <button type="button" onClick={() => {
+                            const arr = [...form.colorVariants];
+                            arr[vi] = { ...arr[vi], photos: arr[vi].photos.filter((_: string, i: number) => i !== pi) };
+                            setForm({ ...form, colorVariants: arr });
+                          }} className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] w-3.5 h-3.5 flex items-center justify-center rounded-full">✕</button>
+                        </div>
+                      ))}
+                      {cv.photos.length < 6 && (
+                        <label className="w-12 h-12 border border-dashed border-black/10 flex items-center justify-center cursor-pointer hover:border-black/40 transition-colors text-[10px]">
+                          +<input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              e.target.value = "";
+                              const url = await uploadFile(file);
+                              const arr = [...form.colorVariants];
+                              arr[vi] = { ...arr[vi], photos: [...arr[vi].photos, url] };
+                              setForm({ ...form, colorVariants: arr });
+                            }
+                          }} />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {form.colorVariants.length < 6 && (
+                  <button type="button" onClick={() => {
+                    setForm({ ...form, colorVariants: [...form.colorVariants, { label: "", color: "#000000", photos: [] }] });
+                  }} className="border border-dashed border-black/10 w-full py-2 text-xs opacity-30 hover:opacity-60 transition-opacity">+ Add Color Variant</button>
+                )}
+              </div>
+
               <div className="flex gap-2 pt-2">
                 <button type="submit" className="flex-1 bg-black text-white py-2 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity">Save</button>
                 <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-xs tracking-widest uppercase border border-black/10 hover:bg-zinc-50">Cancel</button>
@@ -702,6 +764,360 @@ function LookbookSection({ data, handleAction, uploadFile }: any) {
   );
 }
 
+function CollectionsSection({ data, handleAction, uploadFile }: any) {
+  const addCollection = async () => {
+    const title = prompt("Collection title (e.g. SS26 T-SHIRT):");
+    if (!title) return;
+    const category = prompt("Category to filter (e.g. t-shirt):");
+    if (!category) return;
+    await handleAction({ type: "add-collection", title, category, photo: "" });
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold tracking-tight">Collections / Drops</h2>
+        <button onClick={addCollection}
+          className="border border-black/10 px-4 py-1.5 text-xs tracking-widest uppercase hover:bg-black hover:text-white transition-colors">
+          Add Collection
+        </button>
+      </div>
+
+      {data.collections.length === 0 && <p className="text-xs opacity-30 italic">No collections yet.</p>}
+
+      <div className="grid grid-cols-1 gap-6">
+        {data.collections.map((c: any) => (
+          <div key={c.id} className="border border-black/5 bg-white rounded overflow-hidden flex flex-col md:flex-row">
+            <div className="md:w-48 h-32 bg-zinc-100 flex-shrink-0">
+              {c.photo ? (
+                <img src={c.photo} alt={c.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <span className="text-[10px] opacity-30">No Photo</span>
+                </div>
+              )}
+            </div>
+            <div className="flex-1 p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{c.title}</p>
+                <p className="text-[10px] opacity-40 mt-0.5">Category: {c.category}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="cursor-pointer text-[10px] tracking-widest uppercase border border-black/10 px-3 py-1 hover:bg-black hover:text-white transition-colors">
+                  Photo
+                  <input type="file" accept="image/*" className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const url = await uploadFile(file);
+                        await handleAction({ type: "update-collection", id: c.id, photo: url });
+                      }
+                    }} />
+                </label>
+                <button onClick={() => handleAction({ type: "remove-collection", id: c.id })}
+                  className="text-[10px] tracking-widest uppercase text-red-500 hover:text-red-700 transition-colors">
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MarqueeSection({ data, saveField }: any) {
+  const defaults = { enabled: true, text: 'TRIO FASHION — SS 2026 — DEFINE YOUR STYLE — NEW COLLECTION — STREET HIGH QUALITY —', bgColor: '#000000', textColor: '#ffffff', speed: 5, textSize: 'medium', fontFamily: 'Audiowide' };
+  const m = data.marquee ? { ...defaults, ...data.marquee } : defaults;
+  const MARQUEE_FONTS = [
+    'Audiowide', 'Bebas Neue', 'Oswald', 'Anton', 'Rajdhani',
+    'Orbitron', 'Inter', 'Exo 2', 'Kanit', 'Prompt',
+  ];
+  return (
+    <div className="space-y-8">
+      <h2 className="text-lg font-bold tracking-tight">Marquee Strip</h2>
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <label className="text-[10px] tracking-widest uppercase opacity-40">Enabled</label>
+          <button onClick={() => saveField("marquee.enabled", !m.enabled)}
+            className={`relative w-10 h-5 rounded-full transition-colors ${m.enabled ? 'bg-black' : 'bg-zinc-300'}`}>
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${m.enabled ? 'translate-x-5' : ''}`} />
+          </button>
+        </div>
+        <Field label="Text Content" type="textarea" value={m.text} onChange={(v: string) => saveField("marquee.text", v)} />
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Background Color" type="color" value={m.bgColor} onChange={(v: string) => saveField("marquee.bgColor", v)} />
+          <Field label="Text Color" type="color" value={m.textColor} onChange={(v: string) => saveField("marquee.textColor", v)} />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-[10px] tracking-widest uppercase opacity-40">Scroll Speed: {m.speed}</label>
+          <input type="range" min="1" max="10" value={m.speed}
+            onChange={(e) => saveField("marquee.speed", parseInt(e.target.value))}
+            className="w-full" />
+          <div className="flex justify-between text-[10px] opacity-30">
+            <span>Slow</span>
+            <span>Fast</span>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-[10px] tracking-widest uppercase opacity-40">Text Size</label>
+          <div className="flex gap-2">
+            {['small', 'medium', 'large'].map((size) => (
+              <button key={size}
+                onClick={() => saveField("marquee.textSize", size)}
+                className={`px-4 py-1.5 text-xs tracking-widest uppercase border transition-colors ${
+                  m.textSize === size ? 'bg-black text-white border-black' : 'border-black/10 hover:bg-black/5'
+                }`}>
+                {size}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-[10px] tracking-widest uppercase opacity-40">Font</label>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {MARQUEE_FONTS.map((f) => (
+              <button key={f}
+                onClick={() => saveField("marquee.fontFamily", f)}
+                className={`px-3 py-2 text-sm tracking-wider border transition-colors text-left ${
+                  m.fontFamily === f ? 'bg-black text-white border-black' : 'border-black/10 hover:bg-black/5'
+                }`}>
+                <span style={{ fontFamily: `'${f}', sans-serif` }}>{f}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReviewsSection({ data, handleAction, uploadFile }: any) {
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold tracking-tight">Customer Reviews</h2>
+        <label className="cursor-pointer border border-black/10 px-4 py-1.5 text-xs tracking-widest uppercase hover:bg-black hover:text-white transition-colors">
+          Add Review
+          <input type="file" accept="image/*,video/*" className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const url = await uploadFile(file);
+              await handleAction({ type: "add-review", photo: url, name: "", quote: "", rating: 5, mediaType: file.type.startsWith("video") ? "video" : "photo" });
+            }} />
+        </label>
+      </div>
+
+      {(!data.reviews || data.reviews.length === 0) && <p className="text-xs opacity-30 italic">No reviews yet.</p>}
+
+      <div className="grid grid-cols-1 gap-6">
+        {data.reviews?.map((r: any) => (
+          <div key={r.id} className="border border-black/5 bg-white rounded overflow-hidden flex flex-col md:flex-row">
+            <div className="md:w-48 h-32 bg-zinc-100 flex-shrink-0">
+              {r.type === "video" ? (
+                <video src={r.photo} className="w-full h-full object-cover" />
+              ) : r.photo ? (
+                <img src={r.photo} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <span className="text-[10px] opacity-30">No Media</span>
+                </div>
+              )}
+            </div>
+            <div className="flex-1 p-4 space-y-2">
+              <input type="text" placeholder="Name" value={r.name || ""}
+                onChange={(e) => handleAction({ type: "update-review", id: r.id, name: e.target.value })}
+                className="w-full border border-black/10 bg-white px-3 py-1.5 text-sm outline-none focus:border-black/40 transition-colors" />
+              <textarea placeholder="Quote" value={r.quote || ""} rows={2}
+                onChange={(e) => handleAction({ type: "update-review", id: r.id, quote: e.target.value })}
+                className="w-full border border-black/10 bg-white px-3 py-1.5 text-sm outline-none focus:border-black/40 transition-colors resize-none" />
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button key={star}
+                    onClick={() => handleAction({ type: "update-review", id: r.id, rating: star })}
+                    className={`text-lg ${(r.rating || 5) >= star ? 'text-black' : 'text-zinc-200'}`}>
+                    ★
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => handleAction({ type: "remove-review", id: r.id })}
+                className="text-[10px] tracking-widest uppercase text-red-500 hover:text-red-700 transition-colors">
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PagesSection({ data, saveField }: any) {
+  const pages = [
+    { key: "sizing", label: "Sizing Chart" },
+    { key: "refund", label: "Refund & Exchange" },
+    { key: "care", label: "Care Guide" },
+    { key: "shipping", label: "Shipping & Delivery" },
+  ];
+  return (
+    <div className="space-y-12">
+      <h2 className="text-lg font-bold tracking-tight">Static Pages</h2>
+      {pages.map((page) => {
+        const p = data.pages?.[page.key] || { title: page.label, body: "" };
+        return (
+          <div key={page.key} className="border border-black/5 bg-white rounded p-6 space-y-4">
+            <h3 className="text-sm font-bold tracking-wider uppercase">{page.label}</h3>
+            <Field label="Page Title" value={p.title} onChange={(v: string) => saveField(`pages.${page.key}.title`, v)} />
+            <Field label="Body (HTML)" type="textarea" value={p.body} onChange={(v: string) => saveField(`pages.${page.key}.body`, v)} rows={12} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function BannersSection({ data, saveField, uploadFile }: any) {
+  const banners = data.banners || [];
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editSubtitle, setEditSubtitle] = useState("");
+  const [editLink, setEditLink] = useState("");
+  const [editImage, setEditImage] = useState("");
+  const [editBgPosition, setEditBgPosition] = useState("center");
+
+  const bgPositions = [
+    { value: "center", label: "Center" },
+    { value: "top", label: "Top" },
+    { value: "bottom", label: "Bottom" },
+    { value: "left", label: "Left" },
+    { value: "right", label: "Right" },
+    { value: "top left", label: "Top Left" },
+    { value: "top right", label: "Top Right" },
+    { value: "bottom left", label: "Bottom Left" },
+    { value: "bottom right", label: "Bottom Right" },
+  ];
+
+  function addBanner() {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    saveField("banners", [...banners, { id, image: "", title: "New Banner", subtitle: "", link: "/", active: true, order: banners.length, bgPosition: "center" }]);
+    setEditing(id);
+    setEditTitle("New Banner"); setEditSubtitle(""); setEditLink("/"); setEditImage(""); setEditBgPosition("center");
+  }
+
+  function saveBanner(id: string) {
+    saveField("banners", banners.map((b: any) => b.id === id ? { ...b, title: editTitle, subtitle: editSubtitle, link: editLink, image: editImage, bgPosition: editBgPosition } : b));
+    setEditing(null);
+  }
+
+  function deleteBanner(id: string) {
+    saveField("banners", banners.filter((b: any) => b.id !== id));
+    if (editing === id) setEditing(null);
+  }
+
+  function toggleActive(id: string) {
+    saveField("banners", banners.map((b: any) => b.id === id ? { ...b, active: !b.active } : b));
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold tracking-tight">Promo Banners</h2>
+        <button onClick={addBanner} className="border border-black/10 px-4 py-1.5 text-xs tracking-widest uppercase hover:bg-black hover:text-white transition-colors">+ Add Banner</button>
+      </div>
+      {banners.length === 0 && <p className="text-xs opacity-30 italic">No banners yet.</p>}
+      <div className="space-y-4">
+        {banners.map((b: any) => (
+          <div key={b.id} className="border border-black/5 bg-white p-4">
+            {editing === b.id ? (
+              <div className="space-y-3">
+                <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30" placeholder="Title" />
+                <input value={editSubtitle} onChange={(e) => setEditSubtitle(e.target.value)} className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30" placeholder="Subtitle" />
+                <input value={editLink} onChange={(e) => setEditLink(e.target.value)} className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30" placeholder="Link URL" />
+                <div className="flex gap-2 items-center">
+                  {editImage && <img src={editImage} className="w-16 h-16 object-cover bg-zinc-100" />}
+                  <label className="border border-black/10 px-3 py-2 text-xs cursor-pointer hover:bg-zinc-50">
+                    Upload Image
+                    <input type="file" hidden accept="image/*" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f); setEditImage(url); } }} />
+                  </label>
+                  <input value={editImage} onChange={(e) => setEditImage(e.target.value)} className="flex-1 border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30" placeholder="Or paste image URL" />
+                </div>
+                <div>
+                  <label className="text-[10px] tracking-widest uppercase opacity-40 block mb-2">Background Position</label>
+                  <div className="grid grid-cols-3 gap-1.5 max-w-[280px]">
+                    {bgPositions.map((pos) => (
+                      <button key={pos.value} onClick={() => setEditBgPosition(pos.value)}
+                        className={`text-[10px] tracking-wider uppercase px-2 py-1.5 border transition-colors ${
+                          editBgPosition === pos.value ? 'bg-black text-white border-black' : 'border-black/10 hover:border-black/30'
+                        }`}>
+                        {pos.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => saveBanner(b.id)} className="bg-black text-white px-4 py-1.5 text-xs tracking-widest uppercase">Save</button>
+                  <button onClick={() => setEditing(null)} className="border border-black/10 px-4 py-1.5 text-xs tracking-widest uppercase hover:bg-zinc-100">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4">
+                <button onClick={() => toggleActive(b.id)} className={`w-3 h-3 rounded-full flex-shrink-0 ${b.active ? 'bg-green-500' : 'bg-zinc-300'}`} />
+                {b.image && <img src={b.image} className="w-16 h-16 object-cover bg-zinc-100 flex-shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-sm">{b.title}</span>
+                    <span className="text-[10px] opacity-30">{b.active ? 'Active' : 'Inactive'}</span>
+                  </div>
+                  {b.subtitle && <p className="text-xs opacity-50 mt-0.5">{b.subtitle}</p>}
+                  <p className="text-[10px] opacity-30 mt-0.5">Link: {b.link}</p>
+                  <p className="text-[10px] opacity-30 mt-0.5">Position: {b.bgPosition || 'center'}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => { setEditing(b.id); setEditTitle(b.title); setEditSubtitle(b.subtitle); setEditLink(b.link); setEditImage(b.image); setEditBgPosition(b.bgPosition || 'center'); }}
+                    className="text-[10px] uppercase tracking-wider opacity-30 hover:opacity-100">Edit</button>
+                  <button onClick={() => deleteBanner(b.id)} className="text-[10px] uppercase tracking-wider text-red-400 hover:text-red-600">Del</button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NewsletterSection({ data }: any) {
+  const list = data.newsletter || [];
+  const copyEmails = () => {
+    navigator.clipboard.writeText(list.map((e: any) => e.email).join("\n"));
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold tracking-tight">Newsletter Subscribers</h2>
+        <button onClick={copyEmails}
+          className="border border-black/10 px-4 py-1.5 text-xs tracking-widest uppercase hover:bg-black hover:text-white transition-colors">
+          Export ({list.length})
+        </button>
+      </div>
+
+      {list.length === 0 && <p className="text-xs opacity-30 italic">No subscribers yet.</p>}
+
+      <div className="border border-black/5 bg-white divide-y divide-black/5 max-h-96 overflow-y-auto">
+        {list.map((entry: any, i: number) => (
+          <div key={i} className="flex items-center justify-between px-4 py-2.5 text-sm">
+            <span>{entry.email}</span>
+            <span className="text-[10px] opacity-30">{new Date(entry.subscribedAt).toLocaleDateString()}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function AboutSection({ data, saveField, uploadFile }: any) {
   return (
     <div className="space-y-8">
@@ -747,9 +1163,145 @@ function ContactSection({ data, saveField }: any) {
       <div className="space-y-4">
         <Field label="Email" value={data.contact.email} onChange={(v: string) => saveField("contact.email", v)} />
         <Field label="Instagram" value={data.contact.instagram} onChange={(v: string) => saveField("contact.instagram", v)} />
+        <Field label="TikTok" value={data.contact.tiktok} onChange={(v: string) => saveField("contact.tiktok", v)} />
+        <Field label="YouTube" value={data.contact.youtube} onChange={(v: string) => saveField("contact.youtube", v)} />
         <Field label="WhatsApp Number" value={data.contact.whatsapp} onChange={(v: string) => saveField("contact.whatsapp", v)} placeholder="+201234567890" />
         <Field label="Phone Number" value={data.contact.phone} onChange={(v: string) => saveField("contact.phone", v)} placeholder="+201234567890" />
         <Field label="Additional Info" type="textarea" value={data.contact.additional} onChange={(v: string) => saveField("contact.additional", v)} />
+      </div>
+    </div>
+  );
+}
+
+function TasksSection({ data, saveField, saveAll }: any) {
+  const tasks = data.tasks || [];
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editPhase, setEditPhase] = useState("");
+  const [editPriority, setEditPriority] = useState<"low" | "medium" | "high">("medium");
+  const [editStatus, setEditStatus] = useState<"planned" | "in_progress" | "completed">("planned");
+
+  function addTask() {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    const newTasks = [...tasks, { id, title: "New Task", description: "", phase: "General", status: "planned", priority: "medium", order: tasks.length }];
+    saveField("tasks", newTasks);
+    setEditing(id);
+    setEditTitle("New Task");
+    setEditDesc("");
+    setEditPhase("General");
+    setEditPriority("medium");
+    setEditStatus("planned");
+  }
+
+  function deleteTask(id: string) {
+    saveField("tasks", tasks.filter((t: any) => t.id !== id));
+    if (editing === id) setEditing(null);
+  }
+
+  function saveEdit(id: string) {
+    saveField("tasks", tasks.map((t: any) => t.id === id ? { ...t, title: editTitle, description: editDesc, phase: editPhase, priority: editPriority, status: editStatus } : t));
+    setEditing(null);
+  }
+
+  function toggleStatus(id: string) {
+    const t = tasks.find((x: any) => x.id === id);
+    if (!t) return;
+    const next = t.status === "completed" ? "planned" : t.status === "in_progress" ? "completed" : "in_progress";
+    saveField("tasks", tasks.map((x: any) => x.id === id ? { ...x, status: next } : x));
+  }
+
+  function moveUp(i: number) {
+    if (i === 0) return;
+    const arr = [...tasks];
+    [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+    saveField("tasks", arr.map((t, idx) => ({ ...t, order: idx })));
+  }
+
+  function moveDown(i: number) {
+    if (i === tasks.length - 1) return;
+    const arr = [...tasks];
+    [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]];
+    saveField("tasks", arr.map((t, idx) => ({ ...t, order: idx })));
+  }
+
+  const statusColor: Record<string, string> = { planned: "bg-zinc-200 text-zinc-600", in_progress: "bg-blue-100 text-blue-700", completed: "bg-green-100 text-green-700" };
+  const priorityColor: Record<string, string> = { low: "text-zinc-400", medium: "text-amber-500", high: "text-red-500" };
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold tracking-tight">Task / Bug Tracker</h2>
+        <button onClick={addTask} className="border border-black/10 px-4 py-1.5 text-xs tracking-widest uppercase hover:bg-black hover:text-white transition-colors">
+          + Add Task
+        </button>
+      </div>
+
+      {tasks.length === 0 && <p className="text-xs opacity-30 italic">No tasks yet.</p>}
+
+      <div className="space-y-2">
+        {tasks.map((task: any, i: number) => (
+          <div key={task.id} className="border border-black/5 bg-white p-4">
+            {editing === task.id ? (
+              <div className="space-y-3">
+                <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30" placeholder="Task title" />
+                <textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 min-h-[60px]" placeholder="Description" />
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="text-[10px] tracking-widest uppercase opacity-40 block mb-1">Phase</label>
+                    <input value={editPhase} onChange={(e) => setEditPhase(e.target.value)} className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[10px] tracking-widest uppercase opacity-40 block mb-1">Priority</label>
+                    <select value={editPriority} onChange={(e) => setEditPriority(e.target.value as any)} className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 bg-white">
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[10px] tracking-widest uppercase opacity-40 block mb-1">Status</label>
+                    <select value={editStatus} onChange={(e) => setEditStatus(e.target.value as any)} className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/30 bg-white">
+                      <option value="planned">Planned</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => saveEdit(task.id)} className="bg-black text-white px-4 py-1.5 text-xs tracking-widest uppercase">Save</button>
+                  <button onClick={() => setEditing(null)} className="border border-black/10 px-4 py-1.5 text-xs tracking-widest uppercase hover:bg-zinc-100">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start gap-4">
+                <div className="flex flex-col items-center gap-1 pt-1">
+                  <button onClick={() => moveUp(i)} className="text-[10px] opacity-30 hover:opacity-100" disabled={i === 0}>▲</button>
+                  <button onClick={() => moveDown(i)} className="text-[10px] opacity-30 hover:opacity-100" disabled={i === tasks.length - 1}>▼</button>
+                </div>
+                <button onClick={() => toggleStatus(task.id)} className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 ${task.status === "completed" ? "bg-green-500 border-green-500" : "border-black/20"}`}>
+                  {task.status === "completed" && <svg className="w-full h-full text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M5 13l4 4L19 7" /></svg>}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-sm">{task.title}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ${statusColor[task.status] || ""}`}>{task.status.replace("_", " ")}</span>
+                    <span className={`text-xs ${priorityColor[task.priority] || ""}`}>
+                      {task.priority === "high" ? "!!!" : task.priority === "medium" ? "!!" : "!"}
+                    </span>
+                    <span className="text-[10px] opacity-30 uppercase">{task.phase}</span>
+                  </div>
+                  {task.description && <p className="text-xs opacity-50 mt-1">{task.description}</p>}
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button onClick={() => { setEditing(task.id); setEditTitle(task.title); setEditDesc(task.description); setEditPhase(task.phase); setEditPriority(task.priority); setEditStatus(task.status); }}
+                    className="text-[10px] uppercase tracking-wider opacity-30 hover:opacity-100">Edit</button>
+                  <button onClick={() => deleteTask(task.id)} className="text-[10px] uppercase tracking-wider text-red-400 hover:text-red-600">Del</button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -962,6 +1514,16 @@ function OrdersSection() {
                     <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Phone</p>
                     <p>{o.customerPhone}</p>
                   </div>
+                  <div>
+                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Address</p>
+                    <p className="max-w-[200px] break-words">{o.customerAddress || <span className="opacity-30">—</span>}</p>
+                  </div>
+                  {o.deliveryNote && (
+                    <div>
+                      <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Delivery Note</p>
+                      <p className="max-w-[200px] break-words text-zinc-500">{o.deliveryNote}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Items</p>
                     {o.items.map((item: any, i: number) => {

@@ -28,6 +28,10 @@ export async function PUT(req: NextRequest) {
       const bcrypt = await import("bcryptjs");
       data.adminPassword = await bcrypt.hash(updates.password, 10);
     }
+    if (updates.marquee) data.marquee = { ...data.marquee, ...updates.marquee };
+    if (updates.pages) data.pages = { ...data.pages, ...updates.pages };
+    if (updates.tasks) data.tasks = updates.tasks;
+    if (updates.banners) data.banners = updates.banners;
 
     await saveData(data);
 
@@ -80,6 +84,34 @@ export async function POST(req: NextRequest) {
       }
       case "reorder-lookbook": {
         data.lookbook = action.items;
+        break;
+      }
+      case "add-collection": {
+        const { v4: uuid } = await import("uuid");
+        data.collections.push({ id: uuid(), title: action.title, category: action.category, photo: action.photo || "" });
+        break;
+      }
+      case "update-collection": {
+        const ci = data.collections.findIndex((c) => c.id === action.id);
+        if (ci !== -1) data.collections[ci] = { ...data.collections[ci], ...action };
+        break;
+      }
+      case "remove-collection": {
+        data.collections = data.collections.filter((c) => c.id !== action.id);
+        break;
+      }
+      case "add-review": {
+        const { v4: uuid } = await import("uuid");
+        data.reviews.push({ id: uuid(), photo: action.photo || "", name: action.name || "", quote: action.quote || "", rating: action.rating || 5, type: action.mediaType || "photo" });
+        break;
+      }
+      case "update-review": {
+        const ri = data.reviews.findIndex((r: any) => r.id === action.id);
+        if (ri !== -1) data.reviews[ri] = { ...data.reviews[ri], ...action };
+        break;
+      }
+      case "remove-review": {
+        data.reviews = data.reviews.filter((r: any) => r.id !== action.id);
         break;
       }
       default:

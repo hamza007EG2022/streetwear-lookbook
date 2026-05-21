@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: NextRequest) {
   try {
-    const { productName, productPrice, items, customerName, customerPhone } = await req.json();
+    const { productName, productPrice, items, customerName, customerPhone, customerAddress, deliveryNote } = await req.json();
     if (!productName || !customerName || !customerPhone || !items?.length) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
@@ -20,6 +20,8 @@ export async function POST(req: NextRequest) {
       totalPrice,
       customerName,
       customerPhone,
+      customerAddress,
+      deliveryNote,
       createdAt: Date.now(),
     });
     await saveData(data);

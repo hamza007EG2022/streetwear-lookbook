@@ -30,6 +30,7 @@ export interface Product {
   visible?: boolean;
   gender?: 'unisex' | 'men' | 'women';
   priority?: number;
+  colorVariants?: { label: string; color: string; photos: string[] }[];
 }
 
 export interface LookbookItem {
@@ -79,8 +80,81 @@ export interface Order {
   totalPrice: number;
   customerName: string;
   customerPhone: string;
+  customerAddress?: string;
+  deliveryNote?: string;
   createdAt: number;
 }
+
+export interface Collection {
+  id: string;
+  title: string;
+  photo: string;
+  category: string;
+  subtitle?: string;
+}
+
+export interface Review {
+  id: string;
+  photo: string;
+  name: string;
+  quote: string;
+  rating: number;
+  type: 'photo' | 'video';
+}
+
+export interface NewsletterEntry {
+  email: string;
+  subscribedAt: number;
+}
+
+export interface StaticPage {
+  title: string;
+  body: string;
+}
+
+export interface MarqueeConfig {
+  enabled: boolean;
+  text: string;
+  bgColor: string;
+  textColor: string;
+  speed: number;
+  textSize: string;
+  fontFamily: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  phase: string;
+  status: "planned" | "in_progress" | "completed";
+  priority: "low" | "medium" | "high";
+  order: number;
+}
+
+export interface Banner {
+  id: string;
+  image: string;
+  title: string;
+  subtitle: string;
+  link: string;
+  active: boolean;
+  order: number;
+  bgPosition: string;
+}
+
+export const MARQUEE_FONTS = [
+  { label: 'Audiowide', value: 'Audiowide' },
+  { label: 'Bebas Neue', value: 'Bebas Neue' },
+  { label: 'Oswald', value: 'Oswald' },
+  { label: 'Anton', value: 'Anton' },
+  { label: 'Rajdhani', value: 'Rajdhani' },
+  { label: 'Orbitron', value: 'Orbitron' },
+  { label: 'Inter', value: 'Inter' },
+  { label: 'Exo 2', value: 'Exo 2' },
+  { label: 'Kanit', value: 'Kanit' },
+  { label: 'Prompt', value: 'Prompt' },
+];
 
 export interface SiteData {
   _updatedAt?: number;
@@ -89,10 +163,22 @@ export interface SiteData {
   hero: { title: string; subtitle: string; backgroundImage: string };
   products: Product[];
   lookbook: LookbookItem[];
+  collections: Collection[];
+  reviews: Review[];
+  pages: {
+    sizing: StaticPage;
+    refund: StaticPage;
+    care: StaticPage;
+    shipping: StaticPage;
+  };
+  marquee: MarqueeConfig;
   about: { title: string; text: string; images: string[] };
-  contact: { email: string; instagram: string; whatsapp: string; phone: string; additional: string };
+  contact: { email: string; instagram: string; tiktok: string; youtube: string; whatsapp: string; phone: string; additional: string };
+  tasks: Task[];
+  banners: Banner[];
   chats: Chat[];
   orders: Order[];
+  newsletter: NewsletterEntry[];
   encryptionKey: string;
   adminPassword: string;
   adminToken: string;
@@ -116,10 +202,30 @@ const defaults: SiteData = {
   hero: { title: "NEW COLLECTION", subtitle: "SS 2026", backgroundImage: "/placeholder-logo.svg" },
   products: [],
   lookbook: [],
+  collections: [],
+  reviews: [],
+  pages: {
+    sizing: { title: "Sizing Chart", body: "<h3>Tops</h3><table><thead><tr><th>Size</th><th>Chest (cm)</th><th>Chest (in)</th><th>Length (cm)</th><th>Length (in)</th></tr></thead><tbody><tr><td>XS</td><td>86</td><td>34</td><td>66</td><td>26</td></tr><tr><td>S</td><td>91</td><td>36</td><td>69</td><td>27</td></tr><tr><td>M</td><td>96</td><td>38</td><td>71</td><td>28</td></tr><tr><td>L</td><td>102</td><td>40</td><td>74</td><td>29</td></tr><tr><td>XL</td><td>107</td><td>42</td><td>76</td><td>30</td></tr><tr><td>XXL</td><td>112</td><td>44</td><td>79</td><td>31</td></tr></tbody></table><h3>Bottoms</h3><table><thead><tr><th>Size</th><th>Waist (cm)</th><th>Waist (in)</th><th>Inseam (cm)</th><th>Inseam (in)</th></tr></thead><tbody><tr><td>XS</td><td>71</td><td>28</td><td>76</td><td>30</td></tr><tr><td>S</td><td>76</td><td>30</td><td>79</td><td>31</td></tr><tr><td>M</td><td>81</td><td>32</td><td>81</td><td>32</td></tr><tr><td>L</td><td>86</td><td>34</td><td>84</td><td>33</td></tr><tr><td>XL</td><td>91</td><td>36</td><td>86</td><td>34</td></tr><tr><td>XXL</td><td>97</td><td>38</td><td>89</td><td>35</td></tr></tbody></table>" },
+    refund: { title: "Refund & Exchange", body: "<p>We want you to love your purchase. If something isn't right, here's how we can help.</p><h3>Exchange Policy</h3><p>You can exchange any unworn item within 14 days of delivery. Items must be in original condition with tags attached.</p><h3>Return Policy</h3><p>We accept returns on full-price items within 7 days of delivery. Return shipping is the customer's responsibility. Refunds are processed within 5–7 business days after we receive the item.</p><h3>How to Start a Return</h3><p>Contact us via WhatsApp or email with your order number and the item you'd like to return. We'll guide you through the process.</p><h3>Contact for Returns</h3><p>WhatsApp: [your number]<br/>Email: [your email]</p>" },
+    care: { title: "Care Guide", body: "<p>Keep your streetwear looking fresh with these care tips.</p><h3>Washing</h3><p>Turn garments inside out before washing. Use cold water (max 30°C) to preserve colors and prevent shrinkage. Avoid fabric softeners — they break down fibers over time.</p><h3>Drying</h3><p>Air dry only. Do not tumble dry — high heat damages prints and elastic. Hang or lay flat away from direct sunlight.</p><h3>Ironing</h3><p>Iron on low heat inside out. Never iron directly over prints or embroidery — use a pressing cloth.</p><h3>General Tips</h3><p>Wash dark colors separately for the first few washes. Do not bleach or dry clean. Store folded rather than hung to maintain shape for knits and heavy cottons.</p>" },
+    shipping: { title: "Shipping & Delivery", body: "<p>We ship across Egypt with fast and reliable delivery.</p><h3>Delivery Timeframes</h3><p><strong>Cairo & Alexandria:</strong> 1–3 business days<br/><strong>Other cities:</strong> 3–7 business days<br/><strong>Remote areas:</strong> 5–10 business days</p><h3>Shipping Rates</h3><p>Free shipping on orders over 1000 EGP. Flat rate 50 EGP for orders under 1000 EGP.</p><h3>Order Tracking</h3><p>Once your order ships, you'll receive a tracking link via WhatsApp or email.</p><h3>Coverage Areas</h3><p>We deliver to all governorates in Egypt including Cairo, Alexandria, Giza, Delta cities, Upper Egypt, and coastal cities. Contact us if you're unsure about your area.</p>" },
+  },
+  marquee: {
+    enabled: true,
+    text: 'TRIO FASHION — SS 2026 — DEFINE YOUR STYLE — NEW COLLECTION — STREET HIGH QUALITY —',
+    bgColor: '#000000',
+    textColor: '#ffffff',
+    speed: 5,
+    textSize: 'medium',
+    fontFamily: 'Audiowide',
+  },
   about: { title: "OUR STORY", text: "Born from the streets, crafted for the bold.", images: [] },
-  contact: { email: "hello@brand.com", instagram: "@brand", whatsapp: "", phone: "", additional: "Based in New York City" },
+  contact: { email: "hello@brand.com", instagram: "@brand", tiktok: "@brand", youtube: "@brand", whatsapp: "", phone: "", additional: "Based in New York City" },
+  tasks: [],
+  banners: [],
   chats: [],
   orders: [],
+  newsletter: [],
   encryptionKey: "",
   adminPassword: "",
   adminToken: "",

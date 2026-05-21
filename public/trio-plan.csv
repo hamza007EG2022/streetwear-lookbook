@@ -1,0 +1,21 @@
+Phase,Task,Duration (Days),Depends On,Priority
+Purchase System,Design enhanced order flow,1,,Medium
+Purchase System,Build shopping cart,3,Design enhanced order flow,High
+Purchase System,Add order status tracking,2,Build shopping cart,High
+Purchase System,Admin order management improvements,1,Add order status tracking,Medium
+Promo Banners,Design promo banner data model,0.5,,Medium
+Promo Banners,Admin promo banner editor,2,Design promo banner data model,High
+Promo Banners,Render banners on homepage,1,Admin promo banner editor,High
+Category Grid,Design category grid component,0.5,,Medium
+Category Grid,Build homepage category grid,1.5,Design category grid component,High
+Store Locations,Design store locations data model,0.5,,Medium
+Store Locations,Admin locations editor,1,Design store locations data model,Medium
+Store Locations,Build locations section + map,1.5,Admin locations editor,High
+Product Page,Add size guide popup,1,,Medium
+Product Page,Add related products section,1,,Medium
+Contact Page,Design contact page layout,0.5,,Low
+Contact Page,Implement contact form + map,1.5,Design contact page layout,Medium
+SEO,Add meta tags,0.5,,Medium
+SEO,Generate sitemap,0.5,,Low
+Deployment,Push to GitHub,0.5,,Low
+Deployment,Deploy to Vercel,0.5,Push to GitHub,Medium
