@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 type SiteData = any;
 
 const TABS = [
-  "Brand", "Colors", "Hero", "Products", "Lookbook", "Collections", "Marquee", "Reviews", "Pages", "Banners", "Newsletter", "About", "Contact", "Tasks", "Messages", "Orders", "Password"
+  "Brand", "Colors", "Hero", "Products", "Lookbook", "Collections", "Marquee", "Reviews", "Pages", "Banners", "Newsletter", "About", "Contact", "Tasks", "Messages", "Orders", "Analytics", "Fraud", "Coupons", "Customers", "Password"
 ];
 
 export default function DashboardPage() {
@@ -30,21 +30,27 @@ export default function DashboardPage() {
 
   useEffect(() => { checkAuth(); }, [checkAuth]);
 
+  const knownCountRef = useRef(-1);
+
   useEffect(() => {
     if (!auth) return;
-    let knownCount = 0;
+    knownCountRef.current = -1;
     const interval = setInterval(async () => {
       try {
         const res = await fetch("/api/orders", { credentials: "include" });
         if (res.ok) {
           const { orders } = await res.json();
-          if (tab !== "Orders" && orders.length > knownCount) {
-            setNewOrders(orders.length - knownCount);
+          if (knownCountRef.current === -1) {
+            knownCountRef.current = orders.length;
+            return;
+          }
+          if (tab !== "Orders" && orders.length > knownCountRef.current) {
+            setNewOrders(orders.length - knownCountRef.current);
           }
           if (tab === "Orders") {
             setNewOrders(0);
           }
-          knownCount = orders.length;
+          knownCountRef.current = orders.length;
         }
       } catch {}
     }, 10000);
@@ -145,7 +151,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-zinc-50 flex">
       <Sidebar tab={tab} setTab={setTab} msg={msg} saving={saving} newOrders={newOrders} setNewOrders={setNewOrders} />
-      <div className="flex-1 ml-64 p-8">
+      <div className="flex-1 ml-64 p-8 overflow-y-auto h-screen">
         <div className="max-w-4xl">
           {tab === "Brand" && <BrandSection data={data} saveField={saveField} uploadFile={uploadFile} />}
           {tab === "Colors" && <ColorsSection data={data} saveField={saveField} saveAll={saveAll} />}
@@ -162,7 +168,11 @@ export default function DashboardPage() {
           {tab === "Contact" && <ContactSection data={data} saveField={saveField} />}
           {tab === "Tasks" && <TasksSection data={data} saveField={saveField} saveAll={saveAll} />}
           {tab === "Messages" && <MessagesSection />}
-          {tab === "Orders" && <OrdersSection />}
+          {tab === "Orders" && <OrdersSection data={data} saveField={saveField} />}
+          {tab === "Analytics" && <AnalyticsSection />}
+          {tab === "Fraud" && <FraudSection />}
+          {tab === "Coupons" && <CouponsSection data={data} saveAll={saveAll} />}
+          {tab === "Customers" && <CustomersSection data={data} />}
           {tab === "Password" && <PasswordSection />}
         </div>
       </div>
@@ -177,7 +187,7 @@ function Sidebar({ tab, setTab, msg, saving, newOrders, setNewOrders }: any) {
         <h1 className="text-sm font-bold tracking-[0.15em] uppercase">Admin</h1>
         <p className="text-[10px] tracking-widest uppercase opacity-30 mt-1">Dashboard</p>
       </div>
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {TABS.map((t) => (
           <button
             key={t}
@@ -1157,6 +1167,7 @@ function AboutSection({ data, saveField, uploadFile }: any) {
 }
 
 function ContactSection({ data, saveField }: any) {
+  const [waTestMsg, setWaTestMsg] = useState("");
   return (
     <div className="space-y-8">
       <h2 className="text-lg font-bold tracking-tight">Contact & Social</h2>
@@ -1168,6 +1179,72 @@ function ContactSection({ data, saveField }: any) {
         <Field label="WhatsApp Number" value={data.contact.whatsapp} onChange={(v: string) => saveField("contact.whatsapp", v)} placeholder="+201234567890" />
         <Field label="Phone Number" value={data.contact.phone} onChange={(v: string) => saveField("contact.phone", v)} placeholder="+201234567890" />
         <Field label="Additional Info" type="textarea" value={data.contact.additional} onChange={(v: string) => saveField("contact.additional", v)} />
+      </div>
+      <div className="border-t border-black/5 pt-6">
+        <h3 className="text-sm font-bold tracking-wider uppercase mb-4">Payment Accounts</h3>
+        <div className="space-y-4">
+          <Field label="InstaPay Account (username/number)" value={data.contact.instapay || ""} onChange={(v: string) => saveField("contact.instapay", v)} placeholder="e.g. @brand or 01012345678" />
+          <Field label="Telda Account (number)" value={data.contact.telda || ""} onChange={(v: string) => saveField("contact.telda", v)} placeholder="e.g. 01012345678" />
+          <Field label="Fawry Reference Code" value={data.contact.fawry || ""} onChange={(v: string) => saveField("contact.fawry", v)} placeholder="e.g. FAWRY-12345" />
+        </div>
+      </div>
+      <div className="border-t border-black/5 pt-6">
+        <h3 className="text-sm font-bold tracking-wider uppercase mb-4">Delivery Settings</h3>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <label className="text-[10px] tracking-widest uppercase opacity-40">Cash on Delivery Enabled</label>
+            <button onClick={() => saveField("contact.codEnabled", !data.contact.codEnabled)}
+              className={`relative w-10 h-5 rounded-full transition-colors ${data.contact.codEnabled ? 'bg-black' : 'bg-zinc-300'}`}>
+              <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${data.contact.codEnabled ? 'translate-x-5' : ''}`} />
+            </button>
+          </div>
+          <Field label="Delivery Fee (L.E.)" type="number" value={data.contact.deliveryFee ?? 80} onChange={(v: string) => saveField("contact.deliveryFee", parseFloat(v) || 0)} placeholder="80" />
+          <Field label="Free Delivery Minimum (L.E.)" type="number" value={data.contact.freeDeliveryMinimum ?? 2000} onChange={(v: string) => saveField("contact.freeDeliveryMinimum", parseFloat(v) || 0)} placeholder="2000" />
+        </div>
+      </div>
+      <div className="border-t border-black/5 pt-6">
+        <h3 className="text-sm font-bold tracking-wider uppercase mb-4">WhatsApp Automation</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="text-[10px] tracking-widest uppercase opacity-40 mb-2 block">Provider</label>
+            <select
+              value={data.contact.whatsappProvider || "wa_me"}
+              onChange={(e) => saveField("contact.whatsappProvider", e.target.value)}
+              className="border border-black/10 px-3 py-2 text-xs outline-none focus:border-black/40 transition-colors w-full max-w-xs bg-white"
+            >
+              <option value="wa_me">wa.me links (manual — no API key needed)</option>
+              <option value="callmebot">CallMeBot (automatic — requires API key)</option>
+              <option value="whatsapp_cloud">WhatsApp Cloud API (Meta) — requires access token + phone number ID</option>
+            </select>
+          </div>
+          <Field label="WhatsApp API Key / Access Token" value={data.contact.whatsappApiKey || ""} onChange={(v: string) => saveField("contact.whatsappApiKey", v)}
+            placeholder={data.contact.whatsappProvider === "callmebot" ? "CallMeBot API key" : "WhatsApp Cloud API access token"} />
+          {data.contact.whatsappProvider === "whatsapp_cloud" && (
+            <Field label="Phone Number ID" value={data.contact.whatsappPhoneNumberId || ""} onChange={(v: string) => saveField("contact.whatsappPhoneNumberId", v)}
+              placeholder="e.g. 123456789012345" />
+          )}
+          <div className="flex items-center gap-3">
+            <button onClick={async () => {
+              setWaTestMsg("Testing...");
+              try {
+                const res = await fetch("/api/test-whatsapp", { method: "POST", credentials: "include" });
+                const d = await res.json();
+                setWaTestMsg(d.ok ? "✅ Test sent! Check your WhatsApp." : `❌ ${d.error || "Test failed"}`);
+              } catch { setWaTestMsg("❌ Connection error"); }
+              setTimeout(() => setWaTestMsg(""), 8000);
+            }}
+              className="border border-black/20 px-4 py-2 text-xs tracking-widest uppercase hover:bg-black hover:text-white transition-colors">
+              Test WhatsApp
+            </button>
+            {waTestMsg && <span className="text-xs">{waTestMsg}</span>}
+          </div>
+          <p className="text-[10px] opacity-40 leading-relaxed">
+            Messages are sent automatically on: registration, payment confirmation, order status changes, coupon delivery, and fraud alerts.
+            {data.contact.whatsappProvider === "wa_me" ? " With \"wa.me\" provider, messages are only logged in the server console. No actual WhatsApp message is sent." :
+             data.contact.whatsappProvider === "callmebot" ? " With CallMeBot, messages are sent to the customer's phone. Get a free API key at callmebot.com. Note: CallMeBot may take 1-2 minutes to deliver." :
+             " With WhatsApp Cloud API, messages are sent via Meta's official API. You need a Meta Business account, a WhatsApp Business Account, and a phone number registered with WhatsApp Business."}
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -1443,8 +1520,30 @@ function MessagesSection() {
   );
 }
 
-function OrdersSection() {
+function OrdersSection({ data, saveField }: any) {
   const [orders, setOrders] = useState<any[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editNotes, setEditNotes] = useState<Record<string, string>>({});
+  const [trackingInput, setTrackingInput] = useState<Record<string, string>>({});
+  const [savingStatus, setSavingStatus] = useState<Record<string, boolean>>({});
+
+  function getWAStatusMessage(o: any, status: string): string {
+    const shortId = o.id.slice(0, 8).toUpperCase();
+    const trackingText = o.trackingNumber ? `\nTracking: ${o.trackingNumber}` : "";
+    const msgs: Record<string, string> = {
+      Confirmed: `Your payment has been confirmed! ✅ Your order #${shortId} is now being prepared. We will notify you when it ships.`,
+      Preparing: `Your order #${shortId} is being prepared 📦 We'll notify you when it's on its way!`,
+      Shipped: `Your order is on its way! 🚚 Order #${shortId} has been shipped. Expected delivery: 2-5 business days.${trackingText}`,
+      Delivered: `Your order #${shortId} has been delivered! 🎉 Thank you for shopping with TRIO FASHION. We hope you love your pieces!`,
+    };
+    return msgs[status] || `TRIO FASHION — Order #${shortId} status: ${status}`;
+  }
+
+  function getWALink(phone: string, message: string): string {
+    const clean = phone.replace(/[^0-9]/g, "");
+    const waPhone = clean.startsWith("20") ? clean : "2" + clean.replace(/^0\+?/, "");
+    return `https://wa.me/${waPhone}?text=${encodeURIComponent(message)}`;
+  }
 
   useEffect(() => {
     fetch("/api/orders", { credentials: "include" })
@@ -1475,74 +1574,1042 @@ function OrdersSection() {
     } catch {}
   }
 
+  async function updateStatus(id: string, status: string) {
+    setSavingStatus((prev) => ({ ...prev, [id]: true }));
+    try {
+      await fetch("/api/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id, status }),
+      });
+      setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status } : o));
+    } catch {}
+    setSavingStatus((prev) => ({ ...prev, [id]: false }));
+  }
+
+  async function saveNotes(id: string) {
+    setSavingStatus((prev) => ({ ...prev, [id]: true }));
+    try {
+      await fetch("/api/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id, internalNotes: editNotes[id] || "" }),
+      });
+      setOrders((prev) => prev.map((o) => o.id === id ? { ...o, internalNotes: editNotes[id] } : o));
+    } catch {}
+    setSavingStatus((prev) => ({ ...prev, [id]: false }));
+  }
+
   function parsePrice(price: string): number {
     return parseFloat((price || "").replace(/[^0-9.]/g, "")) || 0;
   }
 
+  function getOrderNumber(idx: number): string {
+    return `#${(orders.length - idx).toString().padStart(4, "0")}`;
+  }
+
+  const STATUS_FLOW = ["Pending Verification", "Confirmed", "Preparing", "Shipped", "Delivered"];
+
+  const statusColors: Record<string, string> = {
+    "Pending Verification": "text-amber-600 bg-amber-50 border-amber-200",
+    "Pending Fawry Payment": "text-blue-600 bg-blue-50 border-blue-200",
+    "Cash on Delivery": "text-green-600 bg-green-50 border-green-200",
+    Confirmed: "text-emerald-600 bg-emerald-50 border-emerald-200",
+    Preparing: "text-indigo-600 bg-indigo-50 border-indigo-200",
+    Shipped: "text-purple-600 bg-purple-50 border-purple-200",
+    Delivered: "text-green-700 bg-green-100 border-green-300",
+    Cancelled: "text-red-600 bg-red-50 border-red-200",
+    Refunded: "text-orange-600 bg-orange-50 border-orange-200",
+  };
+
   return (
-    <div className="space-y-6">
-      <h2 className="text-lg font-bold tracking-tight">Orders ({orders.length})</h2>
-      {orders.length === 0 ? (
-        <p className="text-xs opacity-30 italic">No orders yet.</p>
-      ) : (
-        <div className="space-y-3">
-          {orders.map((o: any) => {
-            const unitPrice = parsePrice(o.productPrice);
-            return (
-              <div key={o.id} className="border border-black/5 bg-white rounded p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="text-sm font-medium">{o.productName}</p>
-                    <p className="text-[10px] opacity-40 mt-0.5">
-                      {new Date(o.createdAt).toLocaleDateString()} {new Date(o.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </p>
+    <>
+      {/* Order Settings Panel */}
+      <div className="border border-black/5 bg-white rounded p-6 mb-8">
+        <h3 className="text-sm font-bold tracking-wider uppercase mb-4">Order Settings</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Delivery Fee (L.E.)" type="number" value={data.contact.deliveryFee ?? 80}
+            onChange={(v: string) => saveField("contact.deliveryFee", parseFloat(v) || 0)} placeholder="80" />
+          <Field label="Free Delivery Minimum (L.E.)" type="number" value={data.contact.freeDeliveryMinimum ?? 2000}
+            onChange={(v: string) => saveField("contact.freeDeliveryMinimum", parseFloat(v) || 0)} placeholder="2000" />
+        </div>
+        <div className="flex items-center gap-3 mt-3">
+          <label className="text-[10px] tracking-widest uppercase opacity-40">Cash on Delivery Enabled</label>
+          <button onClick={() => saveField("contact.codEnabled", !data.contact.codEnabled)}
+            className={`relative w-10 h-5 rounded-full transition-colors ${data.contact.codEnabled ? 'bg-black' : 'bg-zinc-300'}`}>
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${data.contact.codEnabled ? 'translate-x-5' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* Orders List */}
+      <div className="space-y-6">
+        <h2 className="text-lg font-bold tracking-tight">Orders ({orders.length})</h2>
+        {orders.length === 0 ? (
+          <p className="text-xs opacity-30 italic">No orders yet.</p>
+        ) : (
+          <div className="space-y-4">
+            {orders.map((o: any, idx: number) => {
+              const isNewFormat = o.items?.[0]?.name || o.items?.[0]?.productId;
+              const unitPrice = parsePrice(o.productPrice);
+              const isExpanded = expandedId === o.id;
+              return (
+                <div key={o.id} className="border border-black/5 bg-white rounded overflow-hidden">
+                  {/* Header */}
+                  <div className="p-4 border-b border-black/5 flex items-start justify-between cursor-pointer hover:bg-zinc-50 transition-colors"
+                    onClick={() => setExpandedId(isExpanded ? null : o.id)}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold tracking-wider">{getOrderNumber(idx)}</span>
+                        {o.status && (
+                          <span className={`text-[9px] tracking-wider uppercase px-2 py-0.5 border rounded ${statusColors[o.status] || "text-zinc-600 bg-zinc-50 border-zinc-200"}`}>
+                            {o.status}
+                          </span>
+                        )}
+                        {o.paymentMethod && (
+                          <span className="text-[9px] tracking-wider uppercase opacity-40 border border-black/10 px-1.5 py-0.5">{o.paymentMethod.toUpperCase()}</span>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium mt-1">
+                        {isNewFormat ? o.items.map((i: any) => i.name).filter(Boolean).join(", ") : o.productName}
+                      </p>
+                      <p className="text-[10px] opacity-40 mt-0.5">
+                        {new Date(o.createdAt).toLocaleDateString()} {new Date(o.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                    <span className="text-xs opacity-30 ml-3">{isExpanded ? "▲" : "▼"}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <p className="text-xs font-medium">{o.productPrice} × {o.items.reduce((s: number, i: any) => s + (i.quantity || 0), 0)}</p>
-                    <button onClick={() => deleteOrder(o.id)}
-                      className="text-[10px] tracking-widest uppercase text-red-500 hover:text-red-700 transition-colors">
-                      Delete
-                    </button>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-4 text-xs border-t border-black/5 pt-3">
-                  <div>
-                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Customer</p>
-                    <p>{o.customerName}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Phone</p>
-                    <p>{o.customerPhone}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Address</p>
-                    <p className="max-w-[200px] break-words">{o.customerAddress || <span className="opacity-30">—</span>}</p>
-                  </div>
-                  {o.deliveryNote && (
-                    <div>
-                      <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Delivery Note</p>
-                      <p className="max-w-[200px] break-words text-zinc-500">{o.deliveryNote}</p>
+
+                  {/* Expanded Content */}
+                  {isExpanded && (
+                    <div className="p-4 space-y-4">
+                      {/* Status Update */}
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="text-[10px] tracking-widest uppercase opacity-40">Update Status:</span>
+                        <select value={o.status} onChange={(e) => updateStatus(o.id, e.target.value)}
+                          className="border border-black/10 bg-white px-3 py-1.5 text-xs outline-none focus:border-black/40">
+                          {STATUS_FLOW.map((s) => <option key={s} value={s}>{s}</option>)}
+                          <option disabled>───</option>
+                          <option value="Cancelled">Cancelled</option>
+                          <option value="Refunded">Refunded</option>
+                        </select>
+
+                        {/* Fulfillment action buttons */}
+                        {o.status === "Confirmed" && (
+                          <button onClick={() => updateStatus(o.id, "Preparing")}
+                            className="bg-indigo-600 text-white px-3 py-1.5 text-[10px] tracking-widest uppercase hover:opacity-80 transition-opacity">
+                            🔄 Prepare Order
+                          </button>
+                        )}
+
+                        {o.status === "Preparing" && (
+                          <div className="flex items-center gap-2">
+                            <input type="text" value={trackingInput[o.id] ?? ""}
+                              onChange={(e) => setTrackingInput((prev) => ({ ...prev, [o.id]: e.target.value }))}
+                              placeholder="Tracking number"
+                              className="border border-black/10 px-2 py-1.5 text-xs outline-none focus:border-black/40 w-40" />
+                            <button onClick={async () => {
+                              const tn = trackingInput[o.id] || "";
+                              if (!tn.trim()) return;
+                              await fetch("/api/orders", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                credentials: "include",
+                                body: JSON.stringify({ id: o.id, status: "Shipped", trackingNumber: tn.trim() }),
+                              });
+                              setOrders((prev: any) => prev.map((p: any) => p.id === o.id ? { ...p, status: "Shipped", trackingNumber: tn.trim() } : p));
+                              setTrackingInput((prev) => ({ ...prev, [o.id]: "" }));
+                            }}
+                              className="bg-purple-600 text-white px-3 py-1.5 text-[10px] tracking-widest uppercase hover:opacity-80 transition-opacity">
+                              🚚 Mark Shipped
+                            </button>
+                          </div>
+                        )}
+
+                        {o.paymentMethod === "fawry" && o.status === "Pending Fawry Payment" && (
+                          <button onClick={async () => {
+                            try {
+                              await fetch("/api/fawry-confirm", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                credentials: "include",
+                                body: JSON.stringify({ orderId: o.id }),
+                              });
+                              setOrders((prev: any) => prev.map((p: any) => p.id === o.id ? { ...p, status: "Confirmed", paymentStatus: "verified" } : p));
+                            } catch {}
+                          }}
+                            className="bg-green-600 text-white px-3 py-1.5 text-[10px] tracking-widest uppercase hover:opacity-80 transition-opacity">
+                            ✓ Confirm Fawry Payment
+                          </button>
+                        )}
+                        {savingStatus[o.id] && <span className="text-[10px] opacity-30">Saving...</span>}
+                      </div>
+
+                      {/* Tracking number display */}
+                      {o.trackingNumber && (
+                        <div className="text-xs">
+                          <span className="text-[10px] tracking-widest uppercase opacity-40">Tracking: </span>
+                          <span className="font-mono font-medium">{o.trackingNumber}</span>
+                        </div>
+                      )}
+
+                      {/* WhatsApp notification link */}
+                      {o.customerPhone && (o.status === "Confirmed" || o.status === "Preparing" || o.status === "Shipped" || o.status === "Delivered") && (
+                        <div>
+                          <a href={getWALink(o.customerPhone, getWAStatusMessage(o, o.status))}
+                            target="_blank"
+                            className="text-[10px] tracking-widest uppercase text-green-600 hover:text-green-800 underline underline-offset-2">
+                            📱 Send WhatsApp Update ({o.status})
+                          </a>
+                        </div>
+                      )}
+
+                      {/* Customer Info */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                        <div>
+                          <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Customer</p>
+                          <p className="font-medium">{o.customerName}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Phone</p>
+                          <p>{o.customerPhone}</p>
+                        </div>
+                        {o.governorate && (
+                          <div>
+                            <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Governorate</p>
+                            <p>{o.governorate}</p>
+                          </div>
+                        )}
+                        <div className="col-span-2">
+                          <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Address</p>
+                          <p className="break-words">{o.customerAddress || <span className="opacity-30">—</span>}</p>
+                        </div>
+                        {o.deliveryNote && (
+                          <div className="col-span-2">
+                            <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Delivery Note</p>
+                            <p className="text-zinc-500">{o.deliveryNote}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Items */}
+                      <div>
+                        <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Items</p>
+                        <div className="border border-black/5 divide-y divide-black/5">
+                          {o.items.map((item: any, i: number) => {
+                            if (isNewFormat) {
+                              const itemPrice = parsePrice(item.discountPrice || item.price);
+                              const sub = (itemPrice * item.quantity).toFixed(2);
+                              return (
+                                <div key={i} className="flex items-center gap-3 px-3 py-2">
+                                  {item.photo && <img src={item.photo} alt="" className="w-10 h-12 object-cover bg-zinc-100" />}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium truncate">{item.name || "Item"}</p>
+                                    <p className="text-[10px] opacity-40">
+                                      {item.size} × {item.quantity}{item.colorLabel ? ` — ${item.colorLabel}` : ""}
+                                    </p>
+                                  </div>
+                                  <span className="text-xs font-medium">{item.discountPrice || item.price}</span>
+                                  <span className="text-xs opacity-50">= {sub}</span>
+                                </div>
+                              );
+                            }
+                            const sub = (unitPrice * item.quantity).toFixed(2);
+                            return (
+                              <div key={i} className="flex items-center justify-between px-3 py-2">
+                                <span className="text-xs">{item.size} × {item.quantity}</span>
+                                <span className="text-xs font-medium">{sub}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Pricing */}
+                      <div className="flex flex-wrap gap-x-8 gap-y-1 text-xs">
+                        <div>
+                          <span className="opacity-40">Subtotal: </span>
+                          <span className="font-medium">{isNewFormat && o.subtotal != null ? o.subtotal.toFixed(2) : (o.totalPrice ?? 0).toFixed(2)} L.E.</span>
+                        </div>
+                        <div>
+                          <span className="opacity-40">Delivery: </span>
+                          <span className="font-medium">{o.deliveryFee != null ? `${o.deliveryFee.toFixed(2)} L.E.` : "—"}</span>
+                        </div>
+                        <div>
+                          <span className="opacity-40">Total: </span>
+                          <span className="font-bold">{(o.total ?? o.totalPrice ?? 0).toFixed(2)} L.E.</span>
+                        </div>
+                        <div>
+                          <span className="opacity-40">Payment: </span>
+                          <span className="font-medium uppercase">{o.paymentMethod || "—"}</span>
+                        </div>
+                      </div>
+
+                      {/* Screenshot */}
+                      {o.screenshot && (
+                        <div>
+                          <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Payment Screenshot</p>
+                          <a href={o.screenshot} target="_blank" className="inline-block border border-black/5">
+                            <img src={o.screenshot} alt="Payment proof" className="w-48 h-auto object-cover" />
+                          </a>
+                        </div>
+                      )}
+
+                      {/* Internal Notes */}
+                      <div>
+                        <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Internal Notes</p>
+                        <div className="flex gap-2">
+                          <textarea value={editNotes[o.id] ?? o.internalNotes ?? ""}
+                            onChange={(e) => setEditNotes((prev) => ({ ...prev, [o.id]: e.target.value }))}
+                            rows={2}
+                            placeholder="Add internal notes about this order..."
+                            className="flex-1 border border-black/10 px-3 py-2 text-xs outline-none focus:border-black/40 resize-none" />
+                          <button onClick={() => saveNotes(o.id)}
+                            className="border border-black/10 px-3 py-1 text-[10px] tracking-widest uppercase hover:bg-black hover:text-white transition-colors whitespace-nowrap">
+                            Save Notes
+                          </button>
+                        </div>
+                        {savingStatus[o.id] && <span className="text-[10px] opacity-30 mt-1 block">Saving...</span>}
+                      </div>
+
+                      {/* Delete */}
+                      <div className="border-t border-black/5 pt-3 flex justify-end">
+                        <button onClick={() => deleteOrder(o.id)}
+                          className="text-[10px] tracking-widest uppercase text-red-500 hover:text-red-700 transition-colors">
+                          Delete Order
+                        </button>
+                      </div>
                     </div>
                   )}
-                  <div>
-                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Items</p>
-                    {o.items.map((item: any, i: number) => {
-                      const sub = (unitPrice * item.quantity).toFixed(2);
-                      return <p key={i}>{item.size} × {item.quantity} = {sub}</p>;
-                    })}
-                  </div>
-                  <div>
-                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-0.5">Total</p>
-                    <p className="font-medium">
-                      {(o.totalPrice ?? (unitPrice * o.items.reduce((s: number, i: any) => s + (i.quantity || 0), 0))).toFixed(2)}
-                    </p>
-                  </div>
                 </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function AnalyticsSection() {
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/analytics", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => { setAnalytics(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="p-6"><p className="text-xs opacity-30">Loading analytics...</p></div>;
+  if (!analytics) return <div className="p-6"><p className="text-xs text-red-500">Failed to load analytics</p></div>;
+
+  const paymentValues = Object.values(analytics.paymentBreakdown || {}) as number[];
+  const maxPayment = Math.max(...paymentValues, 1);
+  const govValues = Object.values(analytics.governorateBreakdown || {}) as number[];
+  const maxGov = Math.max(...govValues, 1);
+  const maxDaily = Math.max(...(analytics.dailyOrders || []).map((d: any) => d.count), 1);
+  const maxSeller = Math.max(...(analytics.bestSellers || []).map((s: any) => s.quantity), 1);
+
+  const paymentLabels: Record<string, string> = {
+    instapay: "InstaPay", telda: "Telda", fawry: "Fawry", cod: "Cash on Delivery", unknown: "Unknown",
+  };
+
+  return (
+    <div className="p-6 space-y-8 max-w-4xl">
+      <h2 className="text-sm font-bold tracking-wider uppercase">Analytics</h2>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white border border-black/10 p-6">
+          <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Total Orders</p>
+          <p className="text-3xl font-bold">{analytics.totalOrders}</p>
+        </div>
+        <div className="bg-white border border-black/10 p-6">
+          <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Total Revenue</p>
+          <p className="text-3xl font-bold">{analytics.totalRevenue.toLocaleString()} L.E.</p>
+        </div>
+        <div className="bg-white border border-black/10 p-6">
+          <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Total Customers</p>
+          <p className="text-3xl font-bold">{analytics.totalCustomers}</p>
+        </div>
+        <div className="bg-white border border-black/10 p-6">
+          <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">New This Month</p>
+          <p className="text-3xl font-bold">{analytics.newCustomersThisMonth}</p>
+        </div>
+        <div className="bg-white border border-black/10 p-6">
+          <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Abandoned Carts</p>
+          <p className="text-3xl font-bold">{analytics.abandonedCart}</p>
+        </div>
+        <div className="bg-white border border-black/10 p-6">
+          <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Revenue / Customer</p>
+          <p className="text-3xl font-bold">{analytics.revenuePerCustomerAvg.toLocaleString()} L.E.</p>
+        </div>
+      </div>
+
+      {/* Top Spenders */}
+      {analytics.topSpenders?.length > 0 && (
+        <div>
+          <p className="text-xs tracking-widest uppercase opacity-40 mb-4">Most Loyal Customers (Top Spenders)</p>
+          <div className="space-y-2">
+            {analytics.topSpenders.map((c: any, i: number) => (
+              <div key={c.id} className="flex items-center gap-3 text-xs">
+                <span className="w-5 text-right opacity-40">{i + 1}.</span>
+                <span className="flex-1 truncate">{c.name}</span>
+                <span className="opacity-50">{c.phone}</span>
+                <span className="font-medium">{c.lifetimeSpend.toLocaleString()} L.E.</span>
+                <span className="opacity-30">({c.orderCount} orders)</span>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       )}
+
+      <div>
+        <p className="text-xs tracking-widest uppercase opacity-40 mb-4">Payment Methods</p>
+        <div className="space-y-2">
+          {Object.entries(analytics.paymentBreakdown || {}).sort(([, a]: any, [, b]: any) => b - a).map(([method, count]: any) => (
+            <div key={method} className="flex items-center gap-3">
+              <span className="text-xs w-28">{paymentLabels[method] || method}</span>
+              <div className="flex-1 h-5 bg-zinc-100 relative">
+                <div className="absolute inset-y-0 left-0 bg-black transition-all" style={{ width: `${(count / maxPayment) * 100}%` }} />
+              </div>
+              <span className="text-xs font-medium w-8 text-right">{count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs tracking-widest uppercase opacity-40 mb-4">Best Selling Products</p>
+        <div className="space-y-2">
+          {(analytics.bestSellers || []).map((item: any, i: number) => (
+            <div key={i} className="flex items-center gap-3">
+              <span className="text-xs w-5 text-right opacity-40">{i + 1}.</span>
+              <span className="text-xs flex-1 truncate">{item.name}</span>
+              <div className="flex-1 h-5 bg-zinc-100 relative">
+                <div className="absolute inset-y-0 left-0 bg-black transition-all" style={{ width: `${(item.quantity / maxSeller) * 100}%` }} />
+              </div>
+              <span className="text-xs font-medium w-8 text-right">{item.quantity}</span>
+            </div>
+          ))}
+          {(!analytics.bestSellers || analytics.bestSellers.length === 0) && (
+            <p className="text-xs opacity-30">No sales data yet</p>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs tracking-widest uppercase opacity-40 mb-4">Orders by Governorate</p>
+        <div className="space-y-2">
+          {Object.entries(analytics.governorateBreakdown || {}).sort(([, a]: any, [, b]: any) => b - a).map(([gov, count]: any) => (
+            <div key={gov} className="flex items-center gap-3">
+              <span className="text-xs w-36 truncate">{gov === "Unknown" ? "(not set)" : gov}</span>
+              <div className="flex-1 h-5 bg-zinc-100 relative">
+                <div className="absolute inset-y-0 left-0 bg-black transition-all" style={{ width: `${(count / maxGov) * 100}%` }} />
+              </div>
+              <span className="text-xs font-medium w-8 text-right">{count}</span>
+            </div>
+          ))}
+          {Object.keys(analytics.governorateBreakdown || {}).length === 0 && (
+            <p className="text-xs opacity-30">No order data yet</p>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs tracking-widest uppercase opacity-40 mb-4">Daily Orders (Last 30 Days)</p>
+        <div className="flex items-end gap-[2px] h-40">
+          {(analytics.dailyOrders || []).map((day: any) => (
+            <div key={day.date} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+              <div
+                className="w-full bg-black transition-all min-h-[1px]"
+                style={{ height: `${Math.max((day.count / maxDaily) * 100, 1)}%` }}
+              />
+              {day.count > 0 && (
+                <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] opacity-0 group-hover:opacity-100 whitespace-nowrap bg-black text-white px-1.5 py-0.5 transition-opacity">
+                  {day.date}: {day.count}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-between mt-1">
+          <span className="text-[8px] opacity-30">{analytics.dailyOrders?.[0]?.date}</span>
+          <span className="text-[8px] opacity-30">{analytics.dailyOrders?.[analytics.dailyOrders.length - 1]?.date}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FraudSection() {
+  const [flaggedAccounts, setFlaggedAccounts] = useState<any[]>([]);
+  const [fraudEvents, setFraudEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionMsg, setActionMsg] = useState("");
+
+  async function loadData() {
+    try {
+      const res = await fetch("/api/fraud", { credentials: "include" });
+      if (!res.ok) return;
+      const d = await res.json();
+      setFlaggedAccounts(d.flaggedAccounts || []);
+      setFraudEvents(d.fraudEvents || []);
+    } catch {} finally { setLoading(false); }
+  }
+
+  useEffect(() => { loadData(); }, []);
+
+  async function unblockAccount(accountId: string, reason?: string) {
+    try {
+      const res = await fetch("/api/fraud", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "unblock", accountId, reason: reason || "Unblocked by admin" }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setFlaggedAccounts(d.flaggedAccounts || []);
+        setFraudEvents(d.fraudEvents || []);
+        setActionMsg("Account unblocked");
+        setTimeout(() => setActionMsg(""), 3000);
+      }
+    } catch {}
+  }
+
+  async function clearEvents() {
+    try {
+      await fetch("/api/fraud", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "clear" }),
+      });
+      setFraudEvents([]);
+      setActionMsg("Event log cleared");
+      setTimeout(() => setActionMsg(""), 3000);
+    } catch {}
+  }
+
+  const severityColors: Record<string, string> = {
+    low: "text-yellow-600 bg-yellow-50 border-yellow-200",
+    medium: "text-orange-600 bg-orange-50 border-orange-200",
+    high: "text-red-600 bg-red-50 border-red-200",
+    critical: "text-red-800 bg-red-100 border-red-300",
+  };
+
+  const eventLabels: Record<string, string> = {
+    duplicate_transaction: "Duplicate Transaction",
+    failed_verification: "Failed Verification",
+    too_many_unconfirmed: "Too Many Unconfirmed",
+    tampered_screenshot: "Tampered Screenshot",
+    account_blocked: "Account Blocked",
+    account_unblocked: "Account Unblocked",
+  };
+
+  if (loading) return <p className="text-xs opacity-30 italic">Loading fraud data...</p>;
+
+  return (
+    <div className="space-y-8">
+      {actionMsg && <p className="text-xs text-green-600">{actionMsg}</p>}
+
+      {/* Flagged Accounts */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold tracking-tight">Flagged Accounts ({flaggedAccounts.length})</h2>
+        </div>
+        {flaggedAccounts.length === 0 ? (
+          <p className="text-xs opacity-30 italic">No flagged accounts.</p>
+        ) : (
+          <div className="space-y-3">
+            {flaggedAccounts.map((acc: any) => (
+              <div key={acc.id} className={`border bg-white p-4 ${acc.blocked ? 'border-red-300 bg-red-50/30' : 'border-amber-200'}`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium">{acc.phone}</span>
+                      <span className={`text-[9px] tracking-wider uppercase px-2 py-0.5 border rounded ${severityColors[acc.severity] || ''}`}>
+                        {acc.severity}
+                      </span>
+                      {acc.blocked && (
+                        <span className="text-[9px] tracking-wider uppercase px-2 py-0.5 border rounded text-red-700 bg-red-100 border-red-300">
+                          BLOCKED
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs mt-1">{acc.reason}</p>
+                    <p className="text-[10px] opacity-40 mt-1">
+                      {new Date(acc.createdAt).toLocaleString()}
+                      {acc.customerId && ` — Customer ID: ${acc.customerId.slice(0, 8)}...`}
+                    </p>
+                    {acc.unblockedAt && (
+                      <p className="text-[10px] text-green-600 mt-0.5">Unblocked {new Date(acc.unblockedAt).toLocaleString()}</p>
+                    )}
+                  </div>
+                  {acc.blocked && (
+                    <button onClick={() => unblockAccount(acc.id)}
+                      className="border border-black/10 px-3 py-1 text-[10px] tracking-widest uppercase hover:bg-black hover:text-white transition-colors shrink-0 ml-3">
+                      Unblock
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Fraud Events */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold tracking-tight">Fraud Event Log ({fraudEvents.length})</h2>
+          {fraudEvents.length > 0 && (
+            <button onClick={clearEvents}
+              className="border border-black/10 px-3 py-1 text-[10px] tracking-widest uppercase hover:bg-black hover:text-white transition-colors">
+              Clear Log
+            </button>
+          )}
+        </div>
+        {fraudEvents.length === 0 ? (
+          <p className="text-xs opacity-30 italic">No fraud events.</p>
+        ) : (
+          <div className="border border-black/5 bg-white divide-y divide-black/5 max-h-96 overflow-y-auto">
+            {fraudEvents.map((ev: any) => (
+              <div key={ev.id} className="px-4 py-2.5 text-xs flex items-start gap-3">
+                <span className={`text-[9px] tracking-wider uppercase px-1.5 py-0.5 border rounded shrink-0 mt-0.5 ${
+                  ev.type.includes("blocked") ? "text-red-600 bg-red-50 border-red-200" : "text-amber-600 bg-amber-50 border-amber-200"
+                }`}>
+                  {eventLabels[ev.type] || ev.type}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p><span className="opacity-50">{ev.phone}</span>{ev.orderId ? ` — Order: ${ev.orderId.slice(0, 8)}...` : ""}</p>
+                  <p className="opacity-40 mt-0.5">{ev.details}</p>
+                </div>
+                <span className="text-[10px] opacity-30 shrink-0">{new Date(ev.createdAt).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CouponsSection({ data, saveAll }: any) {
+  const [code, setCode] = useState("");
+  const [discount, setDiscount] = useState("10");
+  const [type, setType] = useState<"fixed" | "percentage" | "free_delivery">("fixed");
+  const [minOrder, setMinOrder] = useState("0");
+  const [maxUses, setMaxUses] = useState("1");
+  const [assignAll, setAssignAll] = useState(false);
+  const [assignToIds, setAssignToIds] = useState("");
+  const [msg, setMsg] = useState("");
+
+  async function createCoupon() {
+    setMsg("");
+    if (!code.trim()) { setMsg("Enter a coupon code"); return; }
+    try {
+      const coupons = [...(data.coupons || [])];
+      coupons.push({
+        id: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        code: code.trim().toUpperCase(),
+        discount: parseFloat(discount) || 0,
+        type,
+        minOrder: parseFloat(minOrder) || 0,
+        maxUses: parseInt(maxUses) || 1,
+        usedCount: 0,
+        expiresAt: Date.now() + 90 * 24 * 60 * 60 * 1000,
+        assignedTo: assignAll ? ["*"] : assignToIds.split(",").map((s) => s.trim()).filter(Boolean),
+        active: true,
+      });
+      await saveAll({ coupons });
+      setCode("");
+      setMsg("Coupon created!");
+    } catch { setMsg("Error creating coupon"); }
+  }
+
+  async function toggleActive(coupon: any) {
+    const coupons = (data.coupons || []).map((c: any) => c.id === coupon.id ? { ...c, active: !c.active } : c);
+    await saveAll({ coupons });
+  }
+
+  async function deleteCoupon(id: string) {
+    const coupons = (data.coupons || []).filter((c: any) => c.id !== id);
+    await saveAll({ coupons });
+  }
+
+  const now = Date.now();
+
+  return (
+    <div className="space-y-8">
+      <h2 className="text-lg font-bold tracking-tight">Coupons ({data.coupons?.length || 0})</h2>
+
+      {/* Create Coupon */}
+      <div className="border border-black/5 bg-white rounded p-6 space-y-4">
+        <h3 className="text-sm font-bold tracking-wider uppercase">Create Coupon</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="text-[10px] tracking-widest uppercase opacity-40 block mb-1">Code</label>
+            <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="e.g. SUMMER20"
+              className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/40" />
+          </div>
+          <div>
+            <label className="text-[10px] tracking-widest uppercase opacity-40 block mb-1">Type</label>
+            <select value={type} onChange={(e) => setType(e.target.value as any)}
+              className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/40 bg-white">
+              <option value="fixed">Fixed Amount (L.E.)</option>
+              <option value="percentage">Percentage (%)</option>
+              <option value="free_delivery">Free Delivery</option>
+            </select>
+          </div>
+          {type !== "free_delivery" && (
+            <div>
+              <label className="text-[10px] tracking-widest uppercase opacity-40 block mb-1">Discount{type === "percentage" ? " (%)" : " (L.E.)"}</label>
+              <input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)}
+                className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/40" />
+            </div>
+          )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="text-[10px] tracking-widest uppercase opacity-40 block mb-1">Min. Order (L.E.)</label>
+            <input type="number" value={minOrder} onChange={(e) => setMinOrder(e.target.value)}
+              className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/40" />
+          </div>
+          <div>
+            <label className="text-[10px] tracking-widest uppercase opacity-40 block mb-1">Max Uses</label>
+            <input type="number" value={maxUses} onChange={(e) => setMaxUses(e.target.value)}
+              className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/40" />
+          </div>
+          <div className="flex items-end pb-2">
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={assignAll} onChange={(e) => setAssignAll(e.target.checked)} className="accent-black" />
+              Assign to all customers
+            </label>
+          </div>
+        </div>
+        {!assignAll && (
+          <div>
+            <label className="text-[10px] tracking-widest uppercase opacity-40 block mb-1">Assign to Customer IDs (comma-separated)</label>
+            <input value={assignToIds} onChange={(e) => setAssignToIds(e.target.value)}
+              placeholder="e.g. id1, id2, id3"
+              className="w-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-black/40" />
+          </div>
+        )}
+        <button onClick={createCoupon}
+          className="bg-black text-white px-6 py-2 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity">
+          Create Coupon
+        </button>
+        {msg && <p className={`text-xs ${msg.includes("Error") ? "text-red-500" : "text-green-600"}`}>{msg}</p>}
+      </div>
+
+      {/* Coupon List */}
+      <div className="space-y-2">
+        {(!data.coupons || data.coupons.length === 0) ? (
+          <p className="text-xs opacity-30 italic">No coupons created yet.</p>
+        ) : (
+          data.coupons.map((coupon: any) => (
+            <div key={coupon.id} className="border border-black/5 bg-white p-4 flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-bold tracking-wider ${coupon.active ? "" : "line-through opacity-40"}`}>{coupon.code}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 border rounded ${
+                    coupon.type === "free_delivery" ? "text-green-600 border-green-200" :
+                    coupon.type === "percentage" ? "text-blue-600 border-blue-200" : "text-black border-black/20"
+                  }`}>
+                    {coupon.type === "free_delivery" ? "Free Delivery" : coupon.type === "percentage" ? `${coupon.discount}%` : `${coupon.discount} L.E.`}
+                  </span>
+                  {!coupon.active && <span className="text-[10px] text-red-500">Disabled</span>}
+                  {coupon.expiresAt < now && <span className="text-[10px] text-red-500">Expired</span>}
+                </div>
+                <p className="text-[10px] opacity-40 mt-0.5">
+                  Used {coupon.usedCount || 0}/{coupon.maxUses} · Min: {coupon.minOrder} L.E. · 
+                  Expires {new Date(coupon.expiresAt).toLocaleDateString("en-EG")} ·
+                  Assigned to: {coupon.assignedTo?.includes("*") ? "All" : `${coupon.assignedTo?.length || 0} customers`}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 ml-3">
+                <button onClick={() => toggleActive(coupon)}
+                  className={`text-[10px] tracking-widest uppercase px-2 py-1 border transition-colors ${
+                    coupon.active ? "border-red-200 text-red-500 hover:bg-red-50" : "border-green-200 text-green-600 hover:bg-green-50"
+                  }`}>
+                  {coupon.active ? "Disable" : "Enable"}
+                </button>
+                <button onClick={() => deleteCoupon(coupon.id)}
+                  className="text-[10px] tracking-widest uppercase text-red-500 hover:text-red-700">
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CustomersSection({ data }: any) {
+  const [search, setSearch] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [fraudData, setFraudData] = useState<{ flaggedAccounts: any[] }>({ flaggedAccounts: [] });
+
+  useEffect(() => {
+    fetch("/api/fraud", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setFraudData(d))
+      .catch(() => {});
+  }, []);
+
+  const customers = (data?.customers || []).filter((c: any) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return c.name?.toLowerCase().includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q);
+  });
+
+  function getFraudInfo(customer: any): { risk: string; color: string } {
+    const flag = fraudData.flaggedAccounts?.find((f: any) => f.phone === customer.phone || f.customerId === customer.id);
+    if (customer.blacklisted || flag?.blocked === true) return { risk: "High", color: "text-red-600 bg-red-50" };
+    if (flag || customer.failedPaymentAttempts && customer.failedPaymentAttempts >= 2) return { risk: "Medium", color: "text-orange-600 bg-orange-50" };
+    return { risk: "Low", color: "text-green-600 bg-green-50" };
+  }
+
+  function getAccountStatus(customer: any): string {
+    if (customer.blacklisted) return "Blacklisted";
+    const flag = fraudData.flaggedAccounts?.find((f: any) => f.phone === customer.phone || f.customerId === customer.id);
+    if (flag) return "Flagged";
+    return "Active";
+  }
+
+  function getCustomerOrders(customer: any) {
+    return (data?.orders || []).filter((o: any) => o.customerId === customer.id || o.phone === customer.phone);
+  }
+
+  function getMostViewedProducts(customer: any) {
+    return (customer.viewedProducts || []).sort((a: any, b: any) => b.count - a.count).slice(0, 5);
+  }
+
+  function getMostPurchasedCategories(customer: any) {
+    return (customer.browsedCategories || []).sort((a: any, b: any) => b.count - a.count).slice(0, 5);
+  }
+
+  function getCustomerCoupons(customer: any) {
+    return (data?.coupons || []).filter((c: any) => c.assignedTo === "*" || (Array.isArray(c.assignedTo) && c.assignedTo.includes(customer.id)));
+  }
+
+  function formatDate(ts: number) {
+    if (!ts) return "—";
+    return new Date(ts).toLocaleDateString("en-EG", { year: "numeric", month: "short", day: "numeric" });
+  }
+
+  const statusColors: Record<string, string> = {
+    "Pending Verification": "text-yellow-600 bg-yellow-50",
+    "Pending Fawry Payment": "text-yellow-600 bg-yellow-50",
+    "Cash on Delivery": "text-blue-600 bg-blue-50",
+    Confirmed: "text-indigo-600 bg-indigo-50",
+    Preparing: "text-violet-600 bg-violet-50",
+    Shipped: "text-orange-600 bg-orange-50",
+    Delivered: "text-green-600 bg-green-50",
+    Cancelled: "text-red-600 bg-red-50",
+  };
+
+  return (
+    <div className="p-6 space-y-6 max-w-5xl">
+      <h2 className="text-sm font-bold tracking-wider uppercase">Customer Intelligence</h2>
+
+      {/* Search */}
+      <input
+        type="text"
+        placeholder="Search by name, phone, or email..."
+        value={search}
+        onChange={(e) => { setSearch(e.target.value); setExpandedId(null); }}
+        className="w-full border border-black/10 px-4 py-2.5 text-xs outline-none focus:border-black/40 transition-colors"
+      />
+
+      {/* Customer List */}
+      <div className="space-y-2">
+        {customers.length === 0 && (
+          <p className="text-xs opacity-30 italic">{search ? "No customers match your search." : "No customers registered yet."}</p>
+        )}
+        {customers.map((customer: any) => {
+          const orders = getCustomerOrders(customer);
+          const totalItems = orders.reduce((sum: number, o: any) => sum + (o.items?.reduce((s: number, i: any) => s + (i.quantity || 1), 0) || 0), 0);
+          const fraudInfo = getFraudInfo(customer);
+          const status = getAccountStatus(customer);
+          const expanded = expandedId === customer.id;
+
+          return (
+            <div key={customer.id} className="border border-black/5 bg-white">
+              {/* Row */}
+              <div
+                className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-zinc-50 transition-colors text-xs"
+                onClick={() => setExpandedId(expanded ? null : customer.id)}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{customer.name || "—"}</p>
+                  <p className="opacity-40 truncate">{customer.phone}{customer.email ? ` · ${customer.email}` : ""}</p>
+                </div>
+                <div className="hidden md:block text-right">
+                  <p className="font-medium">{customer.lifetimeSpend?.toLocaleString() || 0} L.E.</p>
+                  <p className="opacity-40">{customer.orderCount || 0} orders</p>
+                </div>
+                <div className="hidden md:block text-right">
+                  <p className="font-medium">{customer.loyaltyPoints || 0} pts</p>
+                </div>
+                <span className={`px-2 py-0.5 text-[10px] font-medium ${fraudInfo.color}`}>{fraudInfo.risk}</span>
+                <span className={`px-2 py-0.5 text-[10px] font-medium ${
+                  status === "Blacklisted" ? "text-red-600 bg-red-50" : status === "Flagged" ? "text-orange-600 bg-orange-50" : "text-green-600 bg-green-50"
+                }`}>{status}</span>
+                <span className="text-xs opacity-20">{expanded ? "▲" : "▼"}</span>
+              </div>
+
+              {/* Expanded detail */}
+              {expanded && (
+                <div className="border-t border-black/5 px-4 py-4 space-y-6 text-xs">
+                  {/* Profile Info */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Name</p>
+                      <p className="font-medium">{customer.name || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Phone</p>
+                      <p className="font-medium">{customer.phone || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Email</p>
+                      <p className="font-medium">{customer.email || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Registered</p>
+                      <p className="font-medium">{formatDate(customer.createdAt)}</p>
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-zinc-50 p-3">
+                      <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Total Orders</p>
+                      <p className="text-lg font-bold">{orders.length}</p>
+                    </div>
+                    <div className="bg-zinc-50 p-3">
+                      <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Total Spent</p>
+                      <p className="text-lg font-bold">{customer.lifetimeSpend?.toLocaleString() || 0} L.E.</p>
+                    </div>
+                    <div className="bg-zinc-50 p-3">
+                      <p className="text-[10px] tracking-widest uppercase opacity-40 mb-1">Items Purchased</p>
+                      <p className="text-lg font-bold">{totalItems}</p>
+                    </div>
+                  </div>
+
+                  {/* Loyalty & Fraud */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Loyalty Points</p>
+                      <p className="text-xl font-bold">{customer.loyaltyPoints || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Fraud Risk / Account Status</p>
+                      <div className="flex gap-2">
+                        <span className={`px-2 py-1 text-xs font-medium ${fraudInfo.color}`}>{fraudInfo.risk} Risk</span>
+                        <span className={`px-2 py-1 text-xs font-medium ${
+                          status === "Blacklisted" ? "text-red-600 bg-red-50" : status === "Flagged" ? "text-orange-600 bg-orange-50" : "text-green-600 bg-green-50"
+                        }`}>{status}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Most Viewed Products */}
+                  <div>
+                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Most Viewed Products</p>
+                    {(() => {
+                      const views = getMostViewedProducts(customer);
+                      return views.length > 0 ? (
+                        <div className="space-y-1">
+                          {views.map((v: any) => (
+                            <div key={v.productId} className="flex items-center gap-2">
+                              <span className="opacity-60 w-40 truncate">{v.productId}</span>
+                              <div className="flex-1 h-3 bg-zinc-100 relative">
+                                <div className="absolute inset-y-0 left-0 bg-black/60" style={{ width: `${Math.min((v.count / Math.max(...views.map((x: any) => x.count))) * 100, 100)}%` }} />
+                              </div>
+                              <span className="font-medium w-6 text-right">{v.count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : <p className="opacity-30 italic">No product views tracked</p>;
+                    })()}
+                  </div>
+
+                  {/* Most Purchased Categories */}
+                  <div>
+                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Most Purchased Categories</p>
+                    {(() => {
+                      const cats = getMostPurchasedCategories(customer);
+                      return cats.length > 0 ? (
+                        <div className="space-y-1">
+                          {cats.map((cat: any) => (
+                            <div key={cat.category} className="flex items-center gap-2">
+                              <span className="opacity-60 w-40 truncate">{cat.category}</span>
+                              <div className="flex-1 h-3 bg-zinc-100 relative">
+                                <div className="absolute inset-y-0 left-0 bg-black/60" style={{ width: `${Math.min((cat.count / Math.max(...cats.map((x: any) => x.count))) * 100, 100)}%` }} />
+                              </div>
+                              <span className="font-medium w-6 text-right">{cat.count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : <p className="opacity-30 italic">No category data tracked</p>;
+                    })()}
+                  </div>
+
+                  {/* Coupons */}
+                  <div>
+                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Assigned Coupons</p>
+                    {(() => {
+                      const coupons = getCustomerCoupons(customer);
+                      return coupons.length > 0 ? (
+                        <div className="space-y-1">
+                          {coupons.map((cp: any) => (
+                            <div key={cp.code || cp.id} className="flex items-center gap-3 text-xs">
+                              <span className="font-mono text-[10px] bg-zinc-100 px-1.5 py-0.5">{cp.code}</span>
+                              <span className="opacity-60">{cp.type === "percentage" ? `${cp.discount}% off` : cp.type === "free_delivery" ? "Free Delivery" : `${cp.discount} L.E. off`}</span>
+                              <span className={`px-1.5 py-0.5 text-[10px] font-medium ${cp.usedCount >= cp.maxUses ? "text-red-600 bg-red-50" : "text-green-600 bg-green-50"}`}>
+                                {cp.usedCount >= cp.maxUses ? "Used" : "Available"}
+                              </span>
+                              {cp.expiresAt && <span className="opacity-30">Expires {formatDate(cp.expiresAt)}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      ) : <p className="opacity-30 italic">No coupons assigned</p>;
+                    })()}
+                  </div>
+
+                  {/* Order History */}
+                  <div>
+                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Order History ({orders.length})</p>
+                    {orders.length > 0 ? (
+                      <div className="space-y-1 max-h-60 overflow-y-auto">
+                        {orders.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0)).map((o: any) => (
+                          <div key={o.id} className="flex items-center gap-3 text-xs py-1.5 border-b border-black/5 last:border-0">
+                            <span className="font-mono text-[10px] opacity-40 w-20 truncate">{o.id?.slice(0, 8)}</span>
+                            <span className="w-24 truncate">{formatDate(o.createdAt)}</span>
+                            <span className={`px-1.5 py-0.5 text-[10px] font-medium ${statusColors[o.status] || "text-zinc-600 bg-zinc-50"}`}>{o.status || "—"}</span>
+                            <span className="font-medium w-20 text-right">{o.total?.toLocaleString() || o.totalPrice?.toLocaleString() || "—"} L.E.</span>
+                            <span className="opacity-40 flex-1 truncate">{o.items?.map((i: any) => i.name || i.productId).join(", ") || o.productName || ""}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="opacity-30 italic">No orders placed</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

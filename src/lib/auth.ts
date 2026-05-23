@@ -4,6 +4,30 @@ import { v4 as uuidv4 } from 'uuid';
 import { getData, saveData, isStoreBlocked, useFallbackToken, isValidFallbackToken } from './store';
 
 const tokenCache = new Map<string, true>();
+const customerTokenCache = new Map<string, string>(); // token -> customerId
+
+export function getCustomerTokenFromRequest(req: NextRequest): string | undefined {
+  let token = req.cookies.get("customer_token")?.value;
+  if (!token) {
+    const auth = req.headers.get("authorization");
+    if (auth?.startsWith("Bearer ")) token = auth.slice(7);
+  }
+  return token;
+}
+
+export function createCustomerSessionToken(customerId: string): string {
+  const token = uuidv4();
+  customerTokenCache.set(token, customerId);
+  return token;
+}
+
+export function validateCustomerSessionToken(token: string): string | null {
+  return customerTokenCache.get(token) || null;
+}
+
+export function clearCustomerSessionToken(token: string): void {
+  customerTokenCache.delete(token);
+}
 
 export function getTokenFromRequest(req: NextRequest): string | undefined {
   let token = req.cookies.get("admin_token")?.value;

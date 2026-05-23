@@ -9,6 +9,9 @@ import ThemeProvider from "@/components/ThemeProvider";
 import ChatWidget from "@/components/ChatWidget";
 import SocialFloat from "@/components/SocialFloat";
 import { DataProvider } from "@/components/DataContext";
+import { CartProvider } from "@/lib/cart-context";
+import { ToastProvider } from "@/components/CartToast";
+import { CustomerProvider } from "@/lib/customer-auth-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -61,13 +64,19 @@ export default async function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="min-h-screen flex flex-col antialiased">
         <DataProvider data={publicData}>
-          <ThemeProvider>
-            <Nav />
-            <main className="flex-1">{children}</main>
-            <Footer />
-            <SocialFloat />
-            <ChatWidget />
-          </ThemeProvider>
+          <CartProvider>
+            <CustomerProvider>
+            <ToastProvider>
+              <ThemeProvider>
+                <Nav />
+                <main className="flex-1">{children}</main>
+                <Footer />
+                <SocialFloat />
+                <ChatWidget />
+              </ThemeProvider>
+            </ToastProvider>
+            </CustomerProvider>
+          </CartProvider>
         </DataProvider>
       </body>
     </html>

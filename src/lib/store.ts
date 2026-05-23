@@ -68,20 +68,46 @@ export interface Chat {
 }
 
 export interface OrderItem {
+  productId?: string;
+  name?: string;
+  price?: string;
+  discountPrice?: string;
+  photo?: string;
+  color?: string;
+  colorLabel?: string;
   size: string;
   quantity: number;
 }
 
 export interface Order {
   id: string;
-  productName: string;
-  productPrice: string;
+  productName?: string;
+  productPrice?: string;
   items: OrderItem[];
-  totalPrice: number;
+  totalPrice?: number;
+  subtotal?: number;
+  deliveryFee?: number;
+  total?: number;
+  customerId?: string;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string;
   customerAddress?: string;
+  governorate?: string;
   deliveryNote?: string;
+  paymentMethod?: 'instapay' | 'telda' | 'fawry' | 'cod';
+  paymentStatus?: 'pending' | 'verified';
+  screenshot?: string;
+  transactionId?: string;
+  verificationStatus?: 'pending' | 'verified' | 'rejected' | 'auto_verified';
+  verificationNote?: string;
+  verificationAttempts?: number;
+  fawryReferenceCode?: string;
+  status?: string;
+  internalNotes?: string;
+  trackingNumber?: string;
+  shippedAt?: number;
+  deliveredAt?: number;
   createdAt: number;
 }
 
@@ -132,6 +158,86 @@ export interface Task {
   order: number;
 }
 
+export interface CustomerAddress {
+  id: string;
+  label: string;
+  address: string;
+  governorate: string;
+  isDefault: boolean;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  passwordHash: string;
+  addresses: CustomerAddress[];
+  wishlist: string[];
+  loyaltyPoints: number;
+  createdAt: number;
+  resetCode?: string;
+  resetCodeExpiry?: number;
+  failedPaymentAttempts?: number;
+  lockedUntil?: number;
+  blacklisted?: boolean;
+  viewedProducts?: { productId: string; count: number }[];
+  browsedCategories?: { category: string; count: number }[];
+  lifetimeSpend?: number;
+  orderCount?: number;
+  lastActiveAt?: number;
+  referredBy?: string;
+  birthdayMonth?: number;
+  firstOrderDone?: boolean;
+}
+
+export interface TransactionRecord {
+  id: string;
+  transactionId: string;
+  orderId: string;
+  amount: number;
+  method: 'instapay' | 'telda' | 'fawry' | 'cod';
+  status: 'verified' | 'rejected' | 'pending';
+  checkedAt?: number;
+  customerPhone: string;
+  customerId?: string;
+}
+
+export interface FlaggedAccount {
+  id: string;
+  phone: string;
+  customerId?: string;
+  reason: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  createdAt: number;
+  blocked: boolean;
+  unblockedAt?: number;
+  reviewedBy?: string;
+}
+
+export interface FraudEvent {
+  id: string;
+  type: 'duplicate_transaction' | 'failed_verification' | 'too_many_unconfirmed' | 'tampered_screenshot' | 'account_blocked' | 'account_unblocked';
+  phone: string;
+  customerId?: string;
+  orderId?: string;
+  details: string;
+  createdAt: number;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discount: number;
+  type: 'percentage' | 'fixed' | 'free_delivery';
+  minOrder: number;
+  maxUses: number;
+  usedCount: number;
+  expiresAt: number;
+  assignedTo: string[];
+  active: boolean;
+}
+
 export interface Banner {
   id: string;
   image: string;
@@ -173,11 +279,16 @@ export interface SiteData {
   };
   marquee: MarqueeConfig;
   about: { title: string; text: string; images: string[] };
-  contact: { email: string; instagram: string; tiktok: string; youtube: string; whatsapp: string; phone: string; additional: string };
+  contact: { email: string; instagram: string; tiktok: string; youtube: string; whatsapp: string; phone: string; additional: string; instapay: string; telda: string; fawry: string; codEnabled: boolean; deliveryFee: number; freeDeliveryMinimum: number; whatsappApiKey: string; whatsappProvider: string; whatsappPhoneNumberId: string };
   tasks: Task[];
   banners: Banner[];
   chats: Chat[];
   orders: Order[];
+  customers: Customer[];
+  coupons: Coupon[];
+  transactions: TransactionRecord[];
+  flaggedAccounts: FlaggedAccount[];
+  fraudEvents: FraudEvent[];
   newsletter: NewsletterEntry[];
   encryptionKey: string;
   adminPassword: string;
@@ -220,12 +331,17 @@ const defaults: SiteData = {
     fontFamily: 'Audiowide',
   },
   about: { title: "OUR STORY", text: "Born from the streets, crafted for the bold.", images: [] },
-  contact: { email: "hello@brand.com", instagram: "@brand", tiktok: "@brand", youtube: "@brand", whatsapp: "", phone: "", additional: "Based in New York City" },
+  contact: { email: "hello@brand.com", instagram: "@brand", tiktok: "@brand", youtube: "@brand", whatsapp: "", phone: "", additional: "Based in New York City", instapay: "", telda: "", fawry: "", codEnabled: true, deliveryFee: 80, freeDeliveryMinimum: 2000, whatsappApiKey: "", whatsappProvider: "wa_me", whatsappPhoneNumberId: "" },
   tasks: [],
   banners: [],
   chats: [],
   orders: [],
+  customers: [],
+  coupons: [],
   newsletter: [],
+  transactions: [],
+  flaggedAccounts: [],
+  fraudEvents: [],
   encryptionKey: "",
   adminPassword: "",
   adminToken: "",

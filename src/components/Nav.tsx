@@ -4,6 +4,9 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { usePublicData } from "./DataContext";
+import { useCart } from "@/lib/cart-context";
+import { useCustomer } from "@/lib/customer-auth-context";
+import CartDrawer from "./CartDrawer";
 
 function SearchIcon() {
   return (
@@ -14,13 +17,35 @@ function SearchIcon() {
   );
 }
 
+function BagIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <path d="M16 10a4 4 0 01-8 0" />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
 export default function Nav() {
   const ctx = usePublicData();
+  const { totalItems } = useCart();
+  const { customer } = useCustomer();
   const [brand, setBrand] = useState(ctx?.brand || { name: "", logo: "", tagline: "" });
   const [colors, setColors] = useState<any>(ctx?.colors || null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [cartOpen, setCartOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const searchRef = useRef<HTMLDivElement>(null);
@@ -114,10 +139,25 @@ export default function Nav() {
           {brand.name || "TRIO"}
         </Link>
 
-        <button onClick={() => setSearchOpen(true)} aria-label="Search"
-          className="transition-opacity hover:opacity-60">
-          <SearchIcon />
-        </button>
+        <div className="flex items-center gap-3">
+          <Link href={customer ? "/account" : "/login"} aria-label="Account"
+            className="transition-opacity hover:opacity-60">
+            <UserIcon />
+          </Link>
+          <button onClick={() => setCartOpen(true)} aria-label="Cart"
+            className="transition-opacity hover:opacity-60 relative">
+            <BagIcon />
+            {totalItems > 0 && (
+              <span className="absolute -top-2 -right-2 w-4 h-4 bg-black text-white text-[8px] font-bold flex items-center justify-center rounded-full">
+                {totalItems > 9 ? "9+" : totalItems}
+              </span>
+            )}
+          </button>
+          <button onClick={() => setSearchOpen(true)} aria-label="Search"
+            className="transition-opacity hover:opacity-60">
+            <SearchIcon />
+          </button>
+        </div>
       </div>
 
       {/* Dropdown menu - below navbar */}
@@ -198,6 +238,8 @@ export default function Nav() {
           )}
         </div>
       )}
+
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </nav>
   );
 }

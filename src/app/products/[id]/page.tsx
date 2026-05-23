@@ -4,6 +4,9 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { usePublicData } from "@/components/DataContext";
+import { useCart } from "@/lib/cart-context";
+import { useToast } from "@/components/CartToast";
+import { useCustomer } from "@/lib/customer-auth-context";
 
 const sizeChart = [
   { label: "XS", chest: "86-91", waist: "71-76", length: "69" },
@@ -24,6 +27,9 @@ export default function ProductPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const ctx = usePublicData();
+  const { addItem } = useCart();
+  const { show: showToast } = useToast();
+  const { customer } = useCustomer();
   const [data, setData] = useState<any>(null);
   const [product, setProduct] = useState<any>(null);
   const [selectedPhoto, setSelectedPhoto] = useState(0);
@@ -32,16 +38,18 @@ export default function ProductPage() {
   const [selectedSize, setSelectedSize] = useState("");
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
-  const [sizeQtys, setSizeQtys] = useState<Record<string, number>>({});
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [orderSubmitted, setOrderSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [nameError, setNameError] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [addressError, setAddressError] = useState("");
-  const [deliveryNote, setDeliveryNote] = useState("");
+  const [waStep, setWaStep] = useState<'initial' | 'form'>('initial');
+  const [waSize, setWaSize] = useState("");
+  const [waQty, setWaQty] = useState(1);
+  const [waColorIdx, setWaColorIdx] = useState(-1);
+  const [waSizeErr, setWaSizeErr] = useState("");
+  const [waColorErr, setWaColorErr] = useState("");
   const [showMapPicker, setShowMapPicker] = useState(false);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
@@ -63,6 +71,16 @@ export default function ProductPage() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!product?.id || !customer?.id) return;
+    fetch("/api/customer/track-view", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ productId: product.id, category: product.category }),
+    }).catch(() => {});
+  }, [product?.id, customer?.id]);
 
   const colorVariants = product?.colorVariants || [];
   const colorPhotos = selectedColorIdx >= 0 && colorVariants[selectedColorIdx]?.photos?.length
@@ -90,15 +108,6 @@ export default function ProductPage() {
   }, [fullscreen, goNext, goPrev]);
 
   useEffect(() => {
-    if (showOrderModal && selectedSize) {
-      setSizeQtys((prev) => {
-        if ((prev[selectedSize] || 0) > 0) return prev;
-        return { ...prev, [selectedSize]: 1 };
-      });
-    }
-  }, [showOrderModal]);
-
-  useEffect(() => {
     if (!product?.id) return;
     try {
       const raw = sessionStorage.getItem('recentlyViewed');
@@ -120,14 +129,6 @@ export default function ProductPage() {
     if (Math.abs(diff) > 50) {
       if (diff < 0) goNext();
       else goPrev();
-    }
-  }
-
-  function contactWhatsApp() {
-    if (product) {
-      window.dispatchEvent(new CustomEvent("open-chat", {
-        detail: { message: `I'm interested in: ${product.name} (${product.price})` },
-      }));
     }
   }
 
@@ -242,36 +243,72 @@ export default function ProductPage() {
     };
   }, [showMapPicker]);
 
-  async function submitOrder() {
-    const items = Object.entries(sizeQtys).filter(([, qty]) => qty > 0).map(([size, qty]) => ({ size, quantity: qty }));
-    const nameErr = validateFullName(customerName);
-    if (nameErr) { setNameError(nameErr); return; }
-    setNameError("");
-    const phoneErr = validateEgyptianPhone(customerPhone);
-    if (phoneErr) { setPhoneError(phoneErr); return; }
-    setPhoneError("");
-    if (!customerAddress.trim()) { setAddressError("Please enter your delivery address"); return; }
-    setAddressError("");
-    if (items.length === 0) return;
-    setSubmitting(true);
-    try {
-      await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productName: product.name,
-          productPrice: product.discountPrice || product.price,
-          items,
-          customerName: customerName.trim(),
-          customerPhone: customerPhone.trim(),
-          customerAddress: customerAddress.trim(),
-          deliveryNote: deliveryNote.trim(),
-        }),
-      });
-      setOrderSubmitted(true);
-    } catch {} finally {
-      setSubmitting(false);
+  function submitWhatsAppOrder() {
+    let valid = true;
+
+    if (product?.sizes?.length > 0 && !waSize) {
+      setWaSizeErr("Please select a size");
+      valid = false;
+    } else {
+      setWaSizeErr("");
     }
+
+    if (colorVariants.length > 0 && waColorIdx < 0) {
+      setWaColorErr("Please select a color");
+      valid = false;
+    } else {
+      setWaColorErr("");
+    }
+
+    const nameErr = validateFullName(customerName);
+    if (nameErr) { setNameError(nameErr); valid = false; } else { setNameError(""); }
+
+    const phoneErr = validateEgyptianPhone(customerPhone);
+    if (phoneErr) { setPhoneError(phoneErr); valid = false; } else { setPhoneError(""); }
+
+    if (!customerAddress.trim()) { setAddressError("Please enter your delivery address"); valid = false; } else { setAddressError(""); }
+
+    if (!valid) return;
+
+    const priceStr = product?.discountPrice || product?.price || '';
+    const num = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
+    const total = (num * waQty).toFixed(2);
+    const prefix = priceStr.replace(/[\d.,]+/, '');
+    const colorLabel = waColorIdx >= 0 ? colorVariants[waColorIdx]?.label : '';
+    const sizeStr = waSize || 'One Size';
+
+    const message = `Hello TRIO FASHION! 🛍️
+I would like to order:
+📦 Product: ${product?.name}
+🎨 Color: ${colorLabel || 'N/A'}
+📏 Size: ${sizeStr}
+🔢 Quantity: ${waQty}
+💰 Price per item: ${priceStr}
+💵 Total: ${prefix}${total}
+👤 My Details:
+Name: ${customerName.trim()}
+Phone: ${customerPhone.trim()}
+Address: ${customerAddress.trim()}
+Please confirm my order. Thank you!`;
+
+    const numOnly = data?.contact?.whatsapp?.replace(/[^0-9]/g, '') || '';
+    if (numOnly) {
+      window.open(`https://wa.me/${numOnly}?text=${encodeURIComponent(message)}`, '_blank');
+    }
+
+    setShowOrderModal(false);
+    setWaStep('initial');
+    setWaSize('');
+    setWaQty(1);
+    setWaColorIdx(-1);
+    setWaSizeErr('');
+    setWaColorErr('');
+    setCustomerName('');
+    setCustomerPhone('');
+    setCustomerAddress('');
+    setNameError('');
+    setPhoneError('');
+    setAddressError('');
   }
 
   const related = data?.products?.filter((p: any) => p.id !== product?.id && p.category === product?.category) || [];
@@ -469,6 +506,22 @@ className={`px-4 py-2 text-xs tracking-widest uppercase border transition-colors
               </div>
             )}
 
+            <button onClick={() => {
+              addItem({
+                productId: product.id,
+                name: product.name,
+                price: product.price,
+                discountPrice: product.discountPrice,
+                photo: photos[selectedPhoto] || product.photos?.[0] || "",
+                color: selectedColorIdx >= 0 ? colorVariants[selectedColorIdx]?.color : undefined,
+                colorLabel: selectedColorIdx >= 0 ? colorVariants[selectedColorIdx]?.label : undefined,
+                size: selectedSize || "One Size",
+              });
+              showToast("Added to cart ✓");
+            }}
+              className="w-full md:w-auto bg-black text-white px-10 py-3 text-sm tracking-[0.2em] uppercase hover:opacity-80 transition-opacity mb-3">
+              ADD TO CART
+            </button>
             <button onClick={() => setShowOrderModal(true)}
               className="w-full md:w-auto bg-black text-white px-10 py-3 text-sm tracking-[0.2em] uppercase hover:opacity-80 transition-opacity mt-auto">
               Contact to Order
@@ -643,167 +696,154 @@ className={`px-4 py-2 text-xs tracking-widest uppercase border transition-colors
 
       {/* Order Modal */}
       {showOrderModal && (
-        <div className="fixed inset-0 z-[100] bg-black/20 flex items-center justify-center" onClick={() => { setShowOrderModal(false); setOrderSubmitted(false); setNameError(""); setPhoneError(""); setAddressError(""); setSizeQtys({}); }}>
+        <div className="fixed inset-0 z-[100] bg-black/20 flex items-center justify-center" onClick={() => { setShowOrderModal(false); setNameError(""); setPhoneError(""); setAddressError(""); setWaStep('initial'); setWaSize(''); setWaQty(1); setWaColorIdx(-1); setWaSizeErr(''); setWaColorErr(''); setCustomerName(''); setCustomerPhone(''); setCustomerAddress(''); }}>
           <div className="bg-white p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-sm font-bold tracking-wider uppercase">Contact to Order</h2>
-              <button onClick={() => { setShowOrderModal(false); setOrderSubmitted(false); setNameError(""); setPhoneError(""); setAddressError(""); setSizeQtys({}); }} className="text-sm opacity-30 hover:opacity-100">✕</button>
+              <button onClick={() => { setShowOrderModal(false); setNameError(""); setPhoneError(""); setAddressError(""); setWaStep('initial'); setWaSize(''); setWaQty(1); setWaColorIdx(-1); setWaSizeErr(''); setWaColorErr(''); setCustomerName(''); setCustomerPhone(''); setCustomerAddress(''); }} className="text-sm opacity-30 hover:opacity-100">✕</button>
             </div>
 
-            {orderSubmitted ? (
-              <div className="text-center py-8">
-                <p className="text-sm font-medium mb-2">Order Submitted</p>
-                <p className="text-xs opacity-50">We'll contact you at {customerPhone} to confirm delivery to your address.</p>
-                <button onClick={() => { setShowOrderModal(false); setOrderSubmitted(false); }}
-                  className="mt-6 bg-black text-white px-8 py-2 text-xs tracking-widest uppercase">
-                  Close
-                </button>
-              </div>
+            {waStep === 'initial' ? (
+              <>
+                <p className="text-[10px] opacity-40 mb-6 text-center">How would you like to order?</p>
+                <div className="flex flex-col gap-3">
+                  <button onClick={() => setWaStep('form')}
+                    className="w-full bg-green-600 text-white px-4 py-3 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity">
+                    ORDER VIA WHATSAPP
+                  </button>
+                  <button onClick={() => {
+                    addItem({
+                      productId: product.id,
+                      name: product.name,
+                      price: product.price,
+                      discountPrice: product.discountPrice,
+                      photo: photos[selectedPhoto] || product.photos?.[0] || "",
+                      color: selectedColorIdx >= 0 ? colorVariants[selectedColorIdx]?.color : undefined,
+                      colorLabel: selectedColorIdx >= 0 ? colorVariants[selectedColorIdx]?.label : undefined,
+                      size: selectedSize || "One Size",
+                    });
+                    showToast("Added to cart ✓");
+                    setShowOrderModal(false);
+                    window.location.href = '/checkout';
+                  }}
+                    className="w-full bg-black text-white px-4 py-3 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity">
+                    ORDER VIA WEBSITE
+                  </button>
+                </div>
+              </>
             ) : (
               <>
-                <div className="flex gap-3 mb-6">
-                  <button onClick={contactWhatsApp}
-                    className="flex-1 bg-green-600 text-white px-4 py-3 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity">
-                    WhatsApp
-                  </button>
-                  <button
-                    className="flex-1 bg-black text-white px-4 py-3 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity">
-                    Order on Website
-                  </button>
+                <button onClick={() => { setWaStep('initial'); setWaSize(''); setWaQty(1); setWaColorIdx(-1); setWaSizeErr(''); setWaColorErr(''); }}
+                  className="text-[10px] tracking-widest uppercase opacity-40 hover:opacity-100 mb-4 flex items-center gap-1">
+                  ← Back
+                </button>
+
+                <div className="flex gap-4 mb-4">
+                  {currentPhoto && (
+                    <img src={currentPhoto} alt="" className="w-16 h-20 object-cover bg-zinc-100 flex-shrink-0" />
+                  )}
+                  <div>
+                    <p className="text-sm font-medium">{product?.name}</p>
+                    <p className="text-xs opacity-50 mt-0.5">
+                      {product?.discountPrice ? <>{product.discountPrice} <span className="line-through opacity-50">{product.price}</span></> : product?.price}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="border-t border-black/10 pt-6">
-                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-4">Order Details</p>
-                  <div className="flex gap-4 mb-4">
-                    {currentPhoto && (
-                      <img src={currentPhoto} alt="" className="w-16 h-20 object-cover bg-zinc-100" />
-                    )}
-                    <div>
-                      <p className="text-sm font-medium">{product?.name}</p>
-                      <p className="text-xs opacity-50 mt-0.5">
-                        {product?.discountPrice ? <>{product.discountPrice} <span className="line-through opacity-50">{product.price}</span></> : product?.price}
-                      </p>
-                    </div>
-                  </div>
-
+                {product?.sizes?.length > 0 && (
                   <div className="mb-4">
-                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Sizes &amp; Quantity</p>
-                    <div className="space-y-2">
-                      {product?.sizes?.map((s: string) => {
-                        const qty = sizeQtys[s] || 0;
-                        return (
-                          <div key={s} className="flex items-center justify-between border border-black/10 px-3 py-2">
-                            <span className="text-sm font-medium w-10">{s}</span>
-                            <span className="text-[10px] opacity-40">{product?.discountPrice || product?.price}</span>
-                            <div className="flex items-center gap-3">
-                              <button onClick={() => setSizeQtys((prev) => ({ ...prev, [s]: Math.max(0, (prev[s] || 0) - 1) }))}
-                                className="w-7 h-7 border border-black/20 text-sm flex items-center justify-center hover:bg-zinc-100 transition-colors">−</button>
-                              <span className="text-sm font-medium w-5 text-center">{qty}</span>
-                              <button onClick={() => setSizeQtys((prev) => ({ ...prev, [s]: (prev[s] || 0) + 1 }))}
-                                className="w-7 h-7 border border-black/20 text-sm flex items-center justify-center hover:bg-zinc-100 transition-colors">+</button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="border-t border-black/10 pt-4 mb-6 space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span className="opacity-50">Total Items</span>
-                      <span className="font-medium">{Object.values(sizeQtys).reduce((a, b) => a + b, 0)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="opacity-50">Total Price</span>
-                      <span className="font-medium">
-                        {(() => {
-                          const priceStr = product?.discountPrice || product?.price || '';
-                          const num = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
-                          const total = num * Object.values(sizeQtys).reduce((a, b) => a + b, 0);
-                          const prefix = priceStr.replace(/[\d.,]+/, '');
-                          return prefix + total.toFixed(2);
-                        })()}
-                      </span>
-                    </div>
-                  </div>
-
-                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-3">Your Contact</p>
-                  <div className="space-y-3 mb-6">
-                    <div className="relative">
-                      <input value={customerName}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setCustomerName(v);
-                          setNameError(v ? validateFullName(v) : "");
-                        }}
-                        placeholder="Full Name (First, Middle, Last)"
-                        className={`w-full border px-3 py-2 text-sm outline-none pr-7 ${
-                          nameError ? "border-red-400 focus:border-red-500" : customerName && !nameError ? "border-green-500" : "border-black/20 focus:border-black/60"
-                        }`} />
-                      {customerName && !nameError && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-sm">✓</span>}
-                      {nameError && <p className="text-[10px] text-red-500 mt-1">{nameError}</p>}
-                    </div>
-                    <div className="relative">
-                      <input value={customerPhone}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setCustomerPhone(v);
-                          setPhoneError(v ? validateEgyptianPhone(v) : "");
-                        }}
-                        placeholder="Phone Number (010, 011, 012, 015)"
-                        type="tel"
-                        className={`w-full border px-3 py-2 text-sm outline-none pr-7 ${
-                          phoneError ? "border-red-400 focus:border-red-500" : customerPhone && !phoneError ? "border-green-500" : "border-black/20 focus:border-black/60"
-                        }`} />
-                      {customerPhone && !phoneError && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-sm">✓</span>}
-                      {phoneError && <p className="text-[10px] text-red-500 mt-1">{phoneError}</p>}
-                    </div>
-                    <div>
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <input value={customerAddress}
-                            onChange={(e) => {
-                              setCustomerAddress(e.target.value);
-                              setAddressError("");
-                            }}
-                            placeholder="Delivery Address"
-                            className={`w-full border px-3 py-2 text-sm outline-none pr-7 ${
-                              addressError ? "border-red-400 focus:border-red-500" : customerAddress && !addressError ? "border-green-500" : "border-black/20 focus:border-black/60"
-                            }`} />
-                          {customerAddress && !addressError && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-sm">✓</span>}
-                        </div>
-                        <button type="button" onClick={() => setShowMapPicker(true)}
-                          className="border border-black/20 px-3 py-2 text-sm hover:bg-zinc-100 transition-colors shrink-0"
-                          title="Pick location on map">
-                          📍
+                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Size <span className="text-red-400">*</span></p>
+                    <div className="flex flex-wrap gap-2">
+                      {product.sizes.map((s: string) => (
+                        <button key={s} onClick={() => { setWaSize(s); setWaSizeErr(""); }}
+                          className={`px-4 py-2 text-xs tracking-widest uppercase border transition-colors ${
+                            waSize === s ? "bg-black text-white border-black" : "border-black/20 hover:border-black/60"
+                          }`}>
+                          {s}
                         </button>
-                      </div>
-                      {addressError && <p className="text-[10px] text-red-500 mt-1">{addressError}</p>}
+                      ))}
                     </div>
-                    <div>
-                      <textarea value={deliveryNote} onChange={(e) => setDeliveryNote(e.target.value)}
-                        placeholder="Delivery Note (Optional) — e.g. Ring the bell twice, apartment 4, near the mosque..."
-                        rows={2}
-                        className="w-full border border-black/20 px-3 py-2 text-sm outline-none focus:border-black/60 resize-none" />
-                    </div>
+                    {waSizeErr && <p className="text-[10px] text-red-500 mt-1">{waSizeErr}</p>}
                   </div>
+                )}
 
-                  {(() => {
-                    const nv = !validateFullName(customerName);
-                    const pv = !validateEgyptianPhone(customerPhone);
-                    const av = customerAddress.trim() !== "";
-                    const hi = Object.values(sizeQtys).some(q => q > 0);
-                    const can = nv && pv && av && hi;
-                    return (
-                      <button onClick={submitOrder} disabled={!can || submitting}
-                        className={`w-full py-3 text-xs tracking-widest uppercase transition-opacity ${
-                          can && !submitting ? "bg-black text-white hover:opacity-80" : "bg-black/20 text-white/50 cursor-not-allowed"
-                        }`}>
-                        {submitting ? "Submitting..." : "Submit Order"}
-                      </button>
-                    );
-                  })()}
+                <div className="mb-4">
+                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Quantity <span className="text-red-400">*</span></p>
+                  <div className="flex items-center gap-3 border border-black/20 px-3 py-2 w-fit">
+                    <button onClick={() => setWaQty(Math.max(1, waQty - 1))}
+                      className="w-7 h-7 border border-black/20 text-sm flex items-center justify-center hover:bg-zinc-100 transition-colors">−</button>
+                    <span className="text-sm font-medium w-5 text-center">{waQty}</span>
+                    <button onClick={() => setWaQty(waQty + 1)}
+                      className="w-7 h-7 border border-black/20 text-sm flex items-center justify-center hover:bg-zinc-100 transition-colors">+</button>
+                  </div>
                 </div>
+
+                {colorVariants.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-[10px] tracking-widest uppercase opacity-40 mb-2">Color <span className="text-red-400">*</span></p>
+                    <div className="flex flex-wrap gap-2">
+                      {colorVariants.map((v: any, vi: number) => (
+                        <button key={vi} onClick={() => { setWaColorIdx(vi); setWaColorErr(""); }}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs tracking-wider transition-colors ${
+                            waColorIdx === vi ? "bg-black text-white border-black" : "border-black/10 hover:border-black/30"
+                          }`}>
+                          <span className="w-3.5 h-3.5 rounded-full border border-black/10" style={{ backgroundColor: v.color }} />
+                          {v.label}
+                        </button>
+                      ))}
+                    </div>
+                    {waColorErr && <p className="text-[10px] text-red-500 mt-1">{waColorErr}</p>}
+                  </div>
+                )}
+
+                <div className="border-t border-black/10 pt-4 mb-6 space-y-3">
+                  <p className="text-[10px] tracking-widest uppercase opacity-40 mb-3">Your Details</p>
+                  <div className="relative">
+                    <input value={customerName}
+                      onChange={(e) => { setCustomerName(e.target.value); setNameError(e.target.value ? validateFullName(e.target.value) : ""); }}
+                      placeholder="Full Name (First, Middle, Last)"
+                      className={`w-full border px-3 py-2 text-sm outline-none pr-7 ${
+                        nameError ? "border-red-400 focus:border-red-500" : customerName && !nameError ? "border-green-500" : "border-black/20 focus:border-black/60"
+                      }`} />
+                    {customerName && !nameError && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-sm">✓</span>}
+                    {nameError && <p className="text-[10px] text-red-500 mt-1">{nameError}</p>}
+                  </div>
+                  <div className="relative">
+                    <input value={customerPhone}
+                      onChange={(e) => { setCustomerPhone(e.target.value); setPhoneError(e.target.value ? validateEgyptianPhone(e.target.value) : ""); }}
+                      placeholder="Phone Number (010, 011, 012, 015)"
+                      type="tel"
+                      className={`w-full border px-3 py-2 text-sm outline-none pr-7 ${
+                        phoneError ? "border-red-400 focus:border-red-500" : customerPhone && !phoneError ? "border-green-500" : "border-black/20 focus:border-black/60"
+                      }`} />
+                    {customerPhone && !phoneError && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-sm">✓</span>}
+                    {phoneError && <p className="text-[10px] text-red-500 mt-1">{phoneError}</p>}
+                  </div>
+                  <div>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input value={customerAddress}
+                          onChange={(e) => { setCustomerAddress(e.target.value); setAddressError(""); }}
+                          placeholder="Delivery Address"
+                          className={`w-full border px-3 py-2 text-sm outline-none pr-7 ${
+                            addressError ? "border-red-400 focus:border-red-500" : customerAddress && !addressError ? "border-green-500" : "border-black/20 focus:border-black/60"
+                          }`} />
+                        {customerAddress && !addressError && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-sm">✓</span>}
+                      </div>
+                      <button type="button" onClick={() => setShowMapPicker(true)}
+                        className="border border-black/20 px-3 py-2 text-sm hover:bg-zinc-100 transition-colors shrink-0"
+                        title="Pick location on map">
+                        📍
+                      </button>
+                    </div>
+                    {addressError && <p className="text-[10px] text-red-500 mt-1">{addressError}</p>}
+                  </div>
+                </div>
+
+                <button onClick={submitWhatsAppOrder}
+                  className="w-full bg-green-600 text-white py-3 text-xs tracking-widest uppercase hover:opacity-80 transition-opacity">
+                  Confirm & Open WhatsApp
+                </button>
               </>
             )}
           </div>

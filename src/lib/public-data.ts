@@ -13,7 +13,7 @@ export interface PublicSiteData {
   pages: any;
   marquee: any;
   about: { title: string; text: string; images: string[] };
-  contact: { email: string; instagram: string; tiktok: string; youtube: string; whatsapp: string; phone: string; additional: string };
+  contact: { email: string; instagram: string; tiktok: string; youtube: string; whatsapp: string; phone: string; additional: string; instapay: string; telda: string; fawry: string; codEnabled: boolean; deliveryFee: number; freeDeliveryMinimum: number };
   tasks: any[];
   banners: any[];
 }

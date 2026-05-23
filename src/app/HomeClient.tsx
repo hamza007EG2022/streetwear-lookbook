@@ -4,8 +4,12 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { PublicSiteData } from "@/lib/public-data";
+import { useCart } from "@/lib/cart-context";
+import { useToast } from "@/components/CartToast";
 
 export default function HomeClient({ initialData }: { initialData: PublicSiteData }) {
+  const { addItem } = useCart();
+  const { show: showToast } = useToast();
   const [data, setData] = useState(initialData);
   const [ready, setReady] = useState(false);
   const mounted = useRef(false);
@@ -403,7 +407,20 @@ export default function HomeClient({ initialData }: { initialData: PublicSiteDat
 
               {/* Action buttons */}
               <div className="mt-auto pt-8 space-y-3">
-                <button onClick={() => { setQuickViewProduct(null); router.push(`/products/${qv.id}?order=true`); }}
+                <button onClick={() => {
+                  addItem({
+                    productId: qv.id,
+                    name: qv.name,
+                    price: qv.price,
+                    discountPrice: qv.discountPrice,
+                    photo: qvPhotos[0] || qv.photos?.[0] || "",
+                    color: qvColorIdx >= 0 ? qv.colorVariants[qvColorIdx]?.color : undefined,
+                    colorLabel: qvColorIdx >= 0 ? qv.colorVariants[qvColorIdx]?.label : undefined,
+                    size: qvSize || "One Size",
+                  });
+                  setQuickViewProduct(null);
+                  showToast("Added to cart ✓");
+                }}
                   className="w-full bg-black text-white py-3.5 text-xs tracking-[0.25em] uppercase font-medium transition-opacity hover:opacity-80">
                   ADD TO CART
                 </button>
